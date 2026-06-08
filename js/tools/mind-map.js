@@ -1,111 +1,26 @@
-// ============================================
-// Mind Map (Simple Node Editor)
-// ============================================
-(function() {
-  function render(contentEl) {
-    contentEl.innerHTML = `
-      <div class="card">
-        <div class="card-title">🧠 Mind Map</div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="MM.addNode()">+ Add Node</button>
-          <button class="btn btn-secondary btn-sm" onclick="MM.clear()">Clear</button>
-          <button class="btn btn-secondary btn-sm" onclick="MM.export()">Export JSON</button>
-        </div>
-        <div class="mind-map-canvas" id="mm-canvas">
-          <div class="mm-node root" id="mm-root" style="top:160px;left:50%;transform:translateX(-50%)" data-id="0" contenteditable="true">Central Idea</div>
-        </div>
-      </div>
-    `;
+(function(){
+  function render(c){
+    c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">🧠</span>Mind Map</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" onclick="MM.add()">+ Node</button><button class="btn btn-secondary btn-sm" onclick="MM.clear()">Clear</button><button class="btn btn-secondary btn-sm" onclick="MM.exportPNG()">Export PNG</button></div>
+    <div class="mind-map-canvas" id="mm-canvas"><div class="mm-node root" id="mm-root" style="top:150px;left:50%;transform:translateX(-50%)" data-id="0" contenteditable="true">Central Idea</div></div></div>`;
     MM.load();
   }
-
-  window.MM = {
-    nodes: Store.get('mindmap_nodes', [{ id: 0, text: 'Central Idea', x: 0, y: 0, root: true }]),
-    nextId: 1,
-
-    addNode() {
-      const canvas = document.getElementById('mm-canvas');
-      const id = this.nextId++;
-      const node = document.createElement('div');
-      node.className = 'mm-node';
-      node.dataset.id = id;
-      node.contentEditable = true;
-      node.textContent = 'New idea';
-      node.style.top = (80 + Math.random() * 200) + 'px';
-      node.style.left = (100 + Math.random() * 300) + 'px';
-      node.addEventListener('blur', () => MM.save());
-      // Drag
-      node.addEventListener('mousedown', (e) => MM.drag(e, node));
-      canvas.appendChild(node);
-      this.nodes.push({ id, text: 'New idea', x: 0, y: 0 });
-      this.save();
-    },
-
-    drag(e, node) {
-      const canvas = document.getElementById('mm-canvas');
-      const rect = canvas.getBoundingClientRect();
-      const ox = e.clientX - node.offsetLeft;
-      const oy = e.clientY - node.offsetTop;
-      function move(ev) {
-        node.style.left = (ev.clientX - rect.left - ox) + 'px';
-        node.style.top = (ev.clientY - rect.top - oy) + 'px';
-      }
-      function up() {
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-        MM.save();
-      }
-      document.addEventListener('mousemove', move);
-      document.addEventListener('mouseup', up);
-    },
-
-    clear() {
-      if (!confirm('Clear mind map?')) return;
-      document.querySelectorAll('.mm-node:not(#mm-root)').forEach(n => n.remove());
-      this.nodes = [{ id: 0, text: 'Central Idea', x: 0, y: 0, root: true }];
-      this.nextId = 1;
-      Store.remove('mindmap_nodes');
-    },
-
-    save() {
-      const nodes = [];
-      document.querySelectorAll('.mm-node').forEach(el => {
-        nodes.push({ id: parseInt(el.dataset.id), text: el.textContent, x: el.offsetLeft, y: el.offsetTop, root: el.id === 'mm-root' });
-      });
-      this.nodes = nodes;
-      Store.set('mindmap_nodes', nodes);
-    },
-
-    load() {
-      const saved = Store.get('mindmap_nodes', null);
-      if (!saved || saved.length <= 1) return;
-      this.nodes = saved;
-      this.nextId = Math.max(...saved.map(n => n.id)) + 1;
-      const canvas = document.getElementById('mm-canvas');
-      saved.forEach(n => {
-        if (n.root) return;
-        const node = document.createElement('div');
-        node.className = 'mm-node';
-        node.dataset.id = n.id;
-        node.contentEditable = true;
-        node.textContent = n.text;
-        node.style.top = n.y + 'px';
-        node.style.left = n.x + 'px';
-        node.addEventListener('blur', () => MM.save());
-        node.addEventListener('mousedown', (e) => MM.drag(e, node));
-        canvas.appendChild(node);
-      });
-    },
-
-    export() {
-      const json = JSON.stringify(this.nodes, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'mindmap.json'; a.click();
-      URL.revokeObjectURL(url);
-    }
+  window.MM={
+    nodes:Store.get('mm_nodes',[{id:0,text:'Central Idea',x:0,y:0,root:true}]),nextId:1,
+    add(){const cv=document.getElementById('mm-canvas'),id=this.nextId++,n=document.createElement('div');
+      n.className='mm-node';n.dataset.id=id;n.contentEditable=true;n.textContent='New idea';
+      n.style.top=(80+Math.random()*200)+'px';n.style.left=(100+Math.random()*300)+'px';
+      n.addEventListener('blur',()=>MM.save());n.addEventListener('mousedown',e=>MM.drag(e,n));
+      cv.appendChild(n);this.nodes.push({id,text:'New idea',x:0,y:0});this.save();},
+    drag(e,n){const cv=document.getElementById('mm-canvas'),r=cv.getBoundingClientRect(),ox=e.clientX-n.offsetLeft,oy=e.clientY-n.offsetTop;
+      function mv(ev){n.style.left=(ev.clientX-r.left-ox)+'px';n.style.top=(ev.clientY-r.top-oy)+'px';}
+      function up(){document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);MM.save();}
+      document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);},
+    clear(){document.querySelectorAll('.mm-node:not(#mm-root)').forEach(n=>n.remove());this.nodes=[{id:0,text:'Central Idea',x:0,y:0,root:true}];this.nextId=1;Store.remove('mm_nodes');},
+    save(){const nodes=[];document.querySelectorAll('.mm-node').forEach(el=>{nodes.push({id:parseInt(el.dataset.id),text:el.textContent,x:el.offsetLeft,y:el.offsetTop,root:el.id==='mm-root'});});this.nodes=nodes;Store.set('mm_nodes',nodes);},
+    load(){const s=Store.get('mm_nodes',null);if(!s||s.length<=1)return;this.nodes=s;this.nextId=Math.max(...s.map(n=>n.id))+1;
+      const cv=document.getElementById('mm-canvas');s.forEach(n=>{if(n.root)return;const el=document.createElement('div');el.className='mm-node';el.dataset.id=n.id;el.contentEditable=true;el.textContent=n.text;el.style.top=n.y+'px';el.style.left=n.x+'px';el.addEventListener('blur',()=>MM.save());el.addEventListener('mousedown',e=>MM.drag(e,el));cv.appendChild(el);});},
+    exportPNG(){Toast.info('Use browser screenshot (Win+Shift+S) to capture mind map');}
   };
-
-  Router.registerRoute('#mind-map', 'Mind Map', render);
+  Router.registerRoute('#mind-map','Mind Map',render);
 })();

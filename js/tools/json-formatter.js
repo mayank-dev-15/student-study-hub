@@ -1,65 +1,8 @@
-// ============================================
-// JSON Formatter
-// ============================================
-(function() {
-  function render(contentEl) {
-    contentEl.innerHTML = `
-      <div class="card">
-        <div class="card-title">{ } JSON Formatter & Validator</div>
-        <div class="form-group">
-          <label>Paste JSON</label>
-          <textarea id="jf-input" class="mono" rows="8" placeholder='{"key": "value"}' oninput="JF.format()"></textarea>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <button class="btn btn-primary btn-sm" onclick="JF.format()">Format</button>
-          <button class="btn btn-secondary btn-sm" onclick="JF.minify()">Minify</button>
-          <button class="btn btn-secondary btn-sm" onclick="JF.copy()">Copy</button>
-          <button class="btn btn-danger btn-sm" onclick="JF.clear()">Clear</button>
-        </div>
-        <div id="jf-status" style="font-size:0.82rem;margin-bottom:8px"></div>
-        <div class="form-group">
-          <label>Output</label>
-          <textarea id="jf-output" class="mono" rows="8" readonly></textarea>
-        </div>
-      </div>
-    `;
-  }
-
-  window.JF = {
-    format() {
-      const input = document.getElementById('jf-input').value.trim();
-      const status = document.getElementById('jf-status');
-      const output = document.getElementById('jf-output');
-      if (!input) { status.innerHTML = ''; output.value = ''; return; }
-      try {
-        const obj = JSON.parse(input);
-        output.value = JSON.stringify(obj, null, 2);
-        status.innerHTML = '<span style="color:var(--green)">✓ Valid JSON</span>';
-      } catch (e) {
-        output.value = '';
-        status.innerHTML = `<span style="color:var(--red)">✗ ${esc(e.message)}</span>`;
-      }
-    },
-    minify() {
-      const input = document.getElementById('jf-input').value.trim();
-      try {
-        const obj = JSON.parse(input);
-        document.getElementById('jf-output').value = JSON.stringify(obj);
-        document.getElementById('jf-status').innerHTML = '<span style="color:var(--green)">✓ Minified</span>';
-      } catch (e) {
-        document.getElementById('jf-status').innerHTML = `<span style="color:var(--red)">✗ ${esc(e.message)}</span>`;
-      }
-    },
-    copy() {
-      const output = document.getElementById('jf-output');
-      navigator.clipboard.writeText(output.value).then(() => showToast('Copied!'));
-    },
-    clear() {
-      document.getElementById('jf-input').value = '';
-      document.getElementById('jf-output').value = '';
-      document.getElementById('jf-status').innerHTML = '';
-    }
-  };
-
-  Router.registerRoute('#json-formatter', 'JSON Formatter', render);
+(function(){
+  function render(c){c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">{ }</span>JSON Formatter</div>
+    <div class="form-group"><label>Input</label><textarea id="jf-in" class="mono" rows="5" placeholder='{"key":"value"}' oninput="JF.fmt()"></textarea></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn btn-primary btn-sm" onclick="JF.fmt()">Format</button><button class="btn btn-secondary btn-sm" onclick="JF.min()">Minify</button><button class="btn btn-secondary btn-sm" onclick="JF.copy()">Copy</button><button class="btn btn-danger btn-sm" onclick="JF.clear()">Clear</button></div>
+    <div id="jf-st" style="font-size:0.82rem;margin-bottom:8px"></div><textarea id="jf-out" class="mono" rows="5" readonly></textarea></div>`;}
+  window.JF={fmt(){const v=document.getElementById('jf-in').value.trim(),s=document.getElementById('jf-st'),o=document.getElementById('jf-out');if(!v){s.innerHTML='';o.value='';return;}try{const j=JSON.parse(v);o.value=JSON.stringify(j,null,2);s.innerHTML='<span style="color:var(--green)">✓ Valid JSON</span>';}catch(e){o.value='';s.innerHTML=`<span style="color:var(--red)">✗ ${esc(e.message)}</span>`;}},min(){try{const j=JSON.parse(document.getElementById('jf-in').value);document.getElementById('jf-out').value=JSON.stringify(j);document.getElementById('jf-st').innerHTML='<span style="color:var(--green)">✓ Minified</span>';}catch(e){document.getElementById('jf-st').innerHTML=`<span style="color:var(--red)">✗ ${esc(e.message)}</span>`;}},copy(){navigator.clipboard.writeText(document.getElementById('jf-out').value).then(()=>Toast.success('Copied!'));},clear(){document.getElementById('jf-in').value='';document.getElementById('jf-out').value='';document.getElementById('jf-st').innerHTML='';}};
+  Router.registerRoute('#json-formatter','JSON Formatter',render);
 })();

@@ -1,102 +1,21 @@
-// ============================================
-// Pomodoro Timer
-// ============================================
-(function() {
-  function render(contentEl) {
-    contentEl.innerHTML = `
-      <div class="card" style="text-align:center">
-        <div class="card-title" style="justify-content:center">🍅 Pomodoro Timer</div>
-        <div class="timer-mode">
-          <button class="timer-mode-btn active" id="pm-work" onclick="Pomo.setMode('work')">Work (25m)</button>
-          <button class="timer-mode-btn" id="pm-short" onclick="Pomo.setMode('short')">Short Break (5m)</button>
-          <button class="timer-mode-btn" id="pm-long" onclick="Pomo.setMode('long')">Long Break (15m)</button>
-        </div>
-        <div class="timer-display" id="pomo-time">25:00</div>
-        <div class="progress-bar" style="max-width:400px;margin:0 auto 16px">
-          <div class="fill" id="pomo-progress" style="width:100%"></div>
-        </div>
-        <div class="timer-controls">
-          <button class="btn btn-primary" id="pomo-start" onclick="Pomo.toggle()">▶ Start</button>
-          <button class="btn btn-secondary" onclick="Pomo.reset()">↺ Reset</button>
-        </div>
-        <div style="margin-top:16px;color:var(--text-muted);font-size:0.82rem">
-          Sessions completed: <strong id="pomo-sessions" style="color:var(--accent)">0</strong>
-        </div>
-      </div>
-    `;
+(function(){
+  function render(c){
+    c.innerHTML=`<div class="card anim-fade" style="text-align:center"><div class="card-title" style="justify-content:center"><span class="icon">🍅</span>Pomodoro Timer</div>
+    <div class="timer-mode"><button class="timer-mode-btn active" id="pm-w" onclick="Pomo.set('work')">Work 25m</button><button class="timer-mode-btn" id="pm-s" onclick="Pomo.set('short')">Short 5m</button><button class="timer-mode-btn" id="pm-l" onclick="Pomo.set('long')">Long 15m</button></div>
+    <div class="timer-display" id="pomo-t">25:00</div>
+    <div class="progress-bar" style="max-width:400px;margin:0 auto 16px"><div class="fill" id="pomo-p" style="width:100%"></div></div>
+    <div class="timer-controls"><button class="btn btn-primary" id="pomo-b" onclick="Pomo.toggle()">▶ Start</button><button class="btn btn-secondary" onclick="Pomo.reset()">↺ Reset</button></div>
+    <div style="margin-top:12px;color:var(--text-muted);font-size:0.82rem">Sessions: <strong id="pomo-s" style="color:var(--accent)">0</strong> | Today: <strong id="pomo-td" style="color:var(--green)">0</strong></div></div>`;
     Pomo.load();
   }
-
-  window.Pomo = {
-    mode: 'work',
-    timeLeft: 25 * 60,
-    totalTime: 25 * 60,
-    running: false,
-    interval: null,
-    sessions: Store.get('pomo_sessions', 0),
-
-    setMode(m) {
-      this.mode = m;
-      this.running = false;
-      clearInterval(this.interval);
-      document.getElementById('pomo-start').textContent = '▶ Start';
-      const times = { work: 25 * 60, short: 5 * 60, long: 15 * 60 };
-      this.timeLeft = times[m];
-      this.totalTime = times[m];
-      document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('pm-' + (m === 'work' ? 'work' : m)).classList.add('active');
-      this.updateDisplay();
-    },
-
-    toggle() {
-      if (this.running) {
-        clearInterval(this.interval);
-        this.running = false;
-        document.getElementById('pomo-start').textContent = '▶ Resume';
-      } else {
-        this.running = true;
-        document.getElementById('pomo-start').textContent = '⏸ Pause';
-        this.interval = setInterval(() => this.tick(), 1000);
-      }
-    },
-
-    tick() {
-      this.timeLeft--;
-      if (this.timeLeft <= 0) {
-        clearInterval(this.interval);
-        this.running = false;
-        document.getElementById('pomo-start').textContent = '▶ Start';
-        this.sessions++;
-        Store.set('pomo_sessions', this.sessions);
-        document.getElementById('pomo-sessions').textContent = this.sessions;
-        showToast('🍅 Pomodoro complete! Take a break.');
-        this.setMode(this.mode === 'work' ? 'short' : 'work');
-        return;
-      }
-      this.updateDisplay();
-    },
-
-    reset() {
-      clearInterval(this.interval);
-      this.running = false;
-      document.getElementById('pomo-start').textContent = '▶ Start';
-      this.timeLeft = this.totalTime;
-      this.updateDisplay();
-    },
-
-    updateDisplay() {
-      const m = Math.floor(this.timeLeft / 60);
-      const s = this.timeLeft % 60;
-      document.getElementById('pomo-time').textContent =
-        String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-      const pct = (this.timeLeft / this.totalTime) * 100;
-      document.getElementById('pomo-progress').style.width = pct + '%';
-    },
-
-    load() {
-      document.getElementById('pomo-sessions').textContent = this.sessions;
-    }
+  window.Pomo={
+    mode:'work',time:1500,total:1500,running:false,iv:null,sessions:Store.get('pomo_sessions',0),today:Store.get('pomo_today',0),todayDate:Store.get('pomo_today_date',''),
+    set(m){this.mode=m;this.running=false;clearInterval(this.iv);document.getElementById('pomo-b').textContent='▶ Start';const t={work:1500,short:300,long:900};this.time=t[m];this.total=t[m];document.querySelectorAll('.timer-mode-btn').forEach(b=>b.classList.remove('active'));document.getElementById('pm-'+(m==='work'?'w':m[0])).classList.add('active');this.upd();},
+    toggle(){if(this.running){clearInterval(this.iv);this.running=false;document.getElementById('pomo-b').textContent='▶ Resume';}else{this.running=true;document.getElementById('pomo-b').textContent='⏸ Pause';this.iv=setInterval(()=>this.tick(),1000);}},
+    tick(){this.time--;if(this.time<=0){clearInterval(this.iv);this.running=false;this.sessions++;this.today++;Store.set('pomo_sessions',this.sessions);Store.set('pomo_today',this.today);Store.set('pomo_today_date',new Date().toDateString());document.getElementById('pomo-s').textContent=this.sessions;document.getElementById('pomo-td').textContent=this.today;document.getElementById('pomo-b').textContent='▶ Start';Toast.success('🍅 Complete!');this.set(this.mode==='work'?'short':'work');return;}this.upd();},
+    reset(){clearInterval(this.iv);this.running=false;document.getElementById('pomo-b').textContent='▶ Start';this.time=this.total;this.upd();},
+    upd(){const m=Math.floor(this.time/60),s=this.time%60;document.getElementById('pomo-t').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('pomo-p').style.width=(this.time/this.total*100)+'%';},
+    load(){const today=new Date().toDateString();if(this.todayDate!==today){this.today=0;this.todayDate=today;Store.set('pomo_today',0);Store.set('pomo_today_date',today);}document.getElementById('pomo-s').textContent=this.sessions;document.getElementById('pomo-td').textContent=this.today;}
   };
-
-  Router.registerRoute('#pomodoro', 'Pomodoro Timer', render);
+  Router.registerRoute('#pomodoro','Pomodoro Timer',render);
 })();

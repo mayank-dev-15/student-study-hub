@@ -1,28 +1,34 @@
 // ============================================
-// Theme Manager
+// Theme Manager v2
 // ============================================
 (function() {
-  const THEME_KEY = 'studyhublite_theme';
-  const toggleBtn = document.getElementById('theme-toggle');
+  const KEY = 'studyhub_theme';
 
-  function setTheme(theme) {
+  function set(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    if (toggleBtn) toggleBtn.textContent = theme === 'light' ? '🌙' : '☀️';
-    localStorage.setItem(THEME_KEY, theme);
+    localStorage.setItem(KEY, theme);
+    updateBtn();
+  }
+
+  function get() {
+    return document.documentElement.getAttribute('data-theme') || 'dark';
+  }
+
+  function toggle() {
+    set(get() === 'light' ? 'dark' : 'light');
+  }
+
+  function updateBtn() {
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = get() === 'light' ? '🌙' : '☀️';
   }
 
   function init() {
-    const saved = localStorage.getItem(THEME_KEY);
+    const saved = localStorage.getItem(KEY);
     const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-    setTheme(saved || (prefersLight ? 'light' : 'dark'));
-  }
-
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      setTheme(current === 'light' ? 'dark' : 'light');
-    });
+    set(saved || (prefersLight ? 'light' : 'dark'));
   }
 
   init();
+  window.Theme = { set, get, toggle };
 })();

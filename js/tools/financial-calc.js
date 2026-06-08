@@ -1,0 +1,21 @@
+(function(){
+  function render(c){
+    c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">💰</span>Financial Calculators</div>
+    <div class="tabs"><button class="tab active" onclick="FC.tab('compound',this)">Compound Interest</button><button class="tab" onclick="FC.tab('loan',this)">Loan EMI</button><button class="tab" onclick="FC.tab('tip',this)">Tip Calculator</button></div>
+    <div id="fc-content"></div></div>`;
+    FC.tab('compound',document.querySelector('.tabs .tab'));
+  }
+  window.FC={
+    tab(t,btn){
+      document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');
+      const c=document.getElementById('fc-content');
+      if(t==='compound')c.innerHTML=`<div class="form-row"><div class="form-group" style="margin-bottom:0"><label>Principal ($)</label><input type="number" id="fc-p" value="10000"></div><div class="form-group" style="margin-bottom:0"><label>Rate (%/yr)</label><input type="number" id="fc-r" value="5" step="0.1"></div><div class="form-group" style="margin-bottom:0"><label>Years</label><input type="number" id="fc-t" value="10"></div><div class="form-group" style="margin-bottom:0"><label>Compounds/yr</label><input type="number" id="fc-n" value="12"></div></div><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="FC.compound()">Calculate</button><div id="fc-result" style="margin-top:12px"></div>`;
+      else if(t==='loan')c.innerHTML=`<div class="form-row"><div class="form-group" style="margin-bottom:0"><label>Loan Amount ($)</label><input type="number" id="fc-la" value="100000"></div><div class="form-group" style="margin-bottom:0"><label>Rate (%/yr)</label><input type="number" id="fc-lr" value="7" step="0.1"></div><div class="form-group" style="margin-bottom:0"><label>Tenure (years)</label><input type="number" id="fc-lt" value="5"></div></div><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="FC.loan()">Calculate</button><div id="fc-result" style="margin-top:12px"></div>`;
+      else c.innerHTML=`<div class="form-row"><div class="form-group" style="margin-bottom:0"><label>Bill Amount ($)</label><input type="number" id="fc-ba" value="50"></div><div class="form-group" style="margin-bottom:0"><label>Tip (%)</label><input type="number" id="fc-tp" value="15"></div><div class="form-group" style="margin-bottom:0"><label>People</label><input type="number" id="fc-pp" value="2" min="1"></div></div><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="FC.tip()">Calculate</button><div id="fc-result" style="margin-top:12px"></div>`;
+    },
+    compound(){const p=parseFloat(document.getElementById('fc-p').value)||0,r=(parseFloat(document.getElementById('fc-r').value)||0)/100,t=parseFloat(document.getElementById('fc-t').value)||0,n=parseFloat(document.getElementById('fc-n').value)||1;const a=p*Math.pow(1+r/n,n*t);document.getElementById('fc-result').innerHTML=`<strong>Future Value:</strong> $${a.toFixed(2)}<br><strong>Interest Earned:</strong> $${(a-p).toFixed(2)}`;},
+    loan(){const p=parseFloat(document.getElementById('fc-la').value)||0,r=((parseFloat(document.getElementById('fc-lr').value)||0)/100)/12,n=parseFloat(document.getElementById('fc-lt').value)*12||0;if(!r){document.getElementById('fc-result').innerHTML='<span style="color:var(--red)">Rate cannot be 0</span>';return;}const emi=p*r*Math.pow(1+r,n)/(Math.pow(1,r)-1);document.getElementById('fc-result').innerHTML=`<strong>EMI:</strong> $${emi.toFixed(2)}/mo<br><strong>Total Payment:</strong> $${(emi*n).toFixed(2)}<br><strong>Total Interest:</strong> $${(emi*n-p).toFixed(2)}`;},
+    tip(){const b=parseFloat(document.getElementById('fc-ba').value)||0,tp=(parseFloat(document.getElementById('fc-tp').value)||0)/100,pp=parseInt(document.getElementById('fc-pp').value)||1;const tipAmt=b*tp,total=b+tipAmt;document.getElementById('fc-result').innerHTML=`<strong>Tip:</strong> $${tipAmt.toFixed(2)}<br><strong>Total:</strong> $${total.toFixed(2)}<br><strong>Per person:</strong> $${(total/pp).toFixed(2)}`;}
+  };
+  Router.registerRoute('#financial-calc','Financial Calculators',render);
+})();
