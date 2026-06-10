@@ -280,3 +280,11 @@ MIT License — free for personal and commercial use. Do whatever you want with 
 *Built with ❤️ by a student, for students.*
 
 </div>
+
+
+## Tech Stack
+
+- **Frontend:** Pure HTML5, CSS3, JavaScript (ES6+)
+- **No frameworks** - fully offline capable
+- **Routing:** Hash-based SPA routing
+- **Storage:** LocalStorage for persistence
