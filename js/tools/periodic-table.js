@@ -19,8 +19,8 @@
     c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">⚛️</span>Periodic Table</div>
     <input type="text" id="pt-search" placeholder="Search..." oninput="PT.search()" style="margin-bottom:12px;width:100%;padding:8px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary)">
     <div class="pt-grid" id="pt-grid"></div>
-    <div id="pt-detail" style="margin-top:12px;display:none" class="card"></div></div>`;PT.grid();}
-  window.PT={search(){const q=document.getElementById('pt-search').value.toLowerCase();document.querySelectorAll('.pt-element').forEach(el=>{el.style.display=(!q||el.dataset.n.toLowerCase().includes(q)||el.dataset.sym.toLowerCase().includes(q))?'flex':'none';});},
+    <div id="pt-detail" style="margin-top:12px;display:none" class="card"></div></div>`;PT2.grid();}
+  window.PT2={search(){const q=document.getElementById('pt-search').value.toLowerCase();document.querySelectorAll('.pt-element').forEach(el=>{el.style.display=(!q||el.dataset.n.toLowerCase().includes(q)||el.dataset.sym.toLowerCase().includes(q))?'flex':'none';});},
     grid(){const g=document.getElementById('pt-grid');g.innerHTML=elms.map(e=>`<div class="pt-element pt-${e.t}" data-n="${e.n}" data-sym="${e.sym}" onclick="PT.detail(${e.z})"><span class="pt-number">${e.z}</span><span class="pt-symbol">${e.sym}</span></div>`).join('');for(let i=elms.length;i<118;i++)g.innerHTML+='<div></div>';},
     detail(z){const e=elms.find(x=>x.z===z);document.getElementById('pt-detail').style.display='';document.getElementById('pt-detail').innerHTML=`<strong style="font-size:1.3rem;color:var(--accent)">${e.sym}</strong> — ${e.n} (Z=${e.z})<br><span style="color:var(--text-muted);font-size:0.82rem">Type: ${e.t}</span>`;}};
   Router.registerRoute('#periodic-table','Periodic Table',render);

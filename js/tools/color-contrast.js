@@ -10,14 +10,7 @@
   function lum(c){return c.map(v=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4));}
   function relLum(rgb){return 0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2];}
   window.CC={
-    check(){const fg=document.getElementById('cc-fg').value,bg=document.getElementById('cc-bg').value;
-      const l1=relLum(lum(hexRgb(fg))),l2=relLum(lum(hexRgb(bg))),ratio=(Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);
-      document.getElementById('cc-preview').style.background=bg;document.getElementById('cc-preview').style.color=fg;
-      document.getElementById('cc-ratio').textContent=ratio.toFixed(2)+':1';
-      document.getElementById('cc-aa').innerHTML=ratio>=4.5?'<span class="badge badge-green">✓ Pass</span>':'<span class="badge badge-red">✗ Fail</span>';
-      document.getElementById('cc-aaa').innerHTML=ratio>=7?'<span class="badge badge-green">✓ Pass</span>':'<span class="badge badge-red">✗ Fail</span>';
-      document.getElementById('cc-aal').innerHTML=ratio>=3?'<span class="badge badge-green">✓ Pass</span>':'<span class="badge badge-red">✗ Fail</span>';
-    }
+    check(){let fg=document.getElementById('cc-fg').value,bg=document.getElementById('cc-bg').value;let l1=relLum(lum(hexRgb(fg))),l2=relLum(lum(hexRgb(bg))),ratio=(Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);document.getElementById('cc-preview').style.background=bg;document.getElementById('cc-preview').style.color=fg;document.getElementById('cc-ratio').textContent=ratio.toFixed(2)+':1';let pass=ratio>=4.5?'<span class="badge badge-green">✓ Pass</span>':'<span class="badge badge-red">✗ Fail</span>';document.getElementById('cc-aa').innerHTML=pass;document.getElementById('cc-aaa').innerHTML=ratio>=7?pass:'<span class="badge badge-red">✗ Fail</span>';document.getElementById('cc-aal').innerHTML=ratio>=3?pass:'<span class="badge badge-red">✗ Fail</span>';}
   };
   Router.registerRoute('#color-contrast','Color Contrast',render);
 })();

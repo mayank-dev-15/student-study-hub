@@ -4,12 +4,12 @@
   function render(c){
     c.innerHTML=`<div class="card anim-fade" style="text-align:center"><div class="card-title" style="justify-content:center"><span class="icon">⌨️</span>Speed Typing Test</div>
     <div id="st-target" style="font-size:1.1rem;line-height:2;background:var(--bg-tertiary);padding:16px;border-radius:8px;margin-bottom:12px;text-align:left"></div>
-    <textarea id="st-input" rows="3" placeholder="Start typing here..." style="font-size:1.05rem;text-align:left" oninput="ST.check()"></textarea>
+    <textarea id="st-input" rows="3" placeholder="Start typing here..." style="font-size:1.05rem;text-align:left" oninput="STP.check()"></textarea>
     <div class="stats-row" style="margin-top:12px"><div class="stat-box"><div class="stat-value" id="st-time">0s</div><div class="stat-label">Time</div></div><div class="stat-box"><div class="stat-value" id="st-wpm">0</div><div class="stat-label">WPM</div></div><div class="stat-box"><div class="stat-value" id="st-acc">100%</div><div class="stat-label">Accuracy</div></div></div>
-    <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="ST.reset()">New Text</button></div>`;
-    ST.reset();
+    <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="STP.reset()">New Text</button></div>`;
+    STP.reset();
   }
-  window.ST={
+  window.STP={
     target:'',done:false,
     reset(){this.target=texts[Math.floor(Math.random()*texts.length)];this.done=false;startTime=0;clearInterval(timer);document.getElementById('st-target').textContent=this.target;document.getElementById('st-input').value='';document.getElementById('st-time').textContent='0s';document.getElementById('st-wpm').textContent='0';document.getElementById('st-acc').textContent='100%';},
     check(){if(this.done)return;const input=document.getElementById('st-input').value;if(!startTime&&input.length)startTime=Date.now();

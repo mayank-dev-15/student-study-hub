@@ -4,10 +4,10 @@
   function render(c){
     c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">🌍</span>World Clock</div>
     <div class="grid grid-3" id="wc-grid"></div></div>`;
-    WC.tick();
-    if(!WC.iv)WC.iv=setInterval(()=>WC.tick(),1000);
+    WCL.tick();
+    if(!WCL.iv)WCL.iv=setInterval(()=>WCL.tick(),1000);
   }
-  window.WC={
+  window.WCL={
     iv:null,
     tick(){
       let h='';

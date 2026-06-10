@@ -2,10 +2,10 @@
   function render(c){
     c.innerHTML=`<div class="card anim-fade"><div class="card-title"><span class="icon">📈</span>Graphing Calculator</div>
     <div class="form-group"><label>f(x) = </label><input type="text" id="gc-f" value="Math.sin(x)" placeholder="e.g. x*x, Math.sin(x)"></div>
-    <div class="form-row"><div class="form-group" style="margin-bottom:0"><label>X min</label><input type="number" id="gc-xmin" value="-10" style="width:70px"></div><div class="form-group" style="margin-bottom:0"><label>X max</label><input type="number" id="gc-xmax" value="10" style="width:70px"></div><button class="btn btn-primary btn-sm" onclick="GC.draw()" style="align-self:flex-end">Plot</button></div>
+    <div class="form-row"><div class="form-group" style="margin-bottom:0"><label>X min</label><input type="number" id="gc-xmin" value="-10" style="width:70px"></div><div class="form-group" style="margin-bottom:0"><label>X max</label><input type="number" id="gc-xmax" value="10" style="width:70px"></div><button class="btn btn-primary btn-sm" onclick="GRC.draw()" style="align-self:flex-end">Plot</button></div>
     <canvas id="gc-canvas" style="width:100%;background:var(--bg-tertiary);border-radius:8px;margin-top:12px;border:1px solid var(--border)"></canvas></div>`;
   }
-  window.GC={
+  window.GRC={
     draw(){
       const cv=document.getElementById('gc-canvas'),ctx=cv.getContext('2d');
       cv.width=cv.offsetWidth;cv.height=300;

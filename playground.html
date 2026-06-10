@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Sandbox — Interactive Playground</title>
+<style>
+:root{--bg:#08080f;--bg2:#0f0f1a;--bg3:#161628;--card:#13132a;--border:#282848;--text:#eeeefa;--text2:#9090b0;--muted:#505070;--accent:#7b5cff;--accent2:#ff5c8b;--green:#34d399;--yellow:#fbbf24;--r:10px;--rs:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+#app{display:flex;height:100vh}
+#sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:8px 0}
+#sidebar .title{padding:8px 14px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:.8rem;color:var(--text2);cursor:pointer;transition:all .12s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(123,92,255,.08);color:var(--accent);border-left-color:var(--accent)}
+.nav-item .ic{width:16px;text-align:center}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#toolbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);min-height:44px}
+#toolbar h2{font-size:.88rem;font-weight:600}
+#toolbar .spacer{flex:1}
+#workspace{flex:1;overflow:hidden;position:relative}
+canvas{display:block}
+.toast{position:fixed;bottom:16px;right:16px;padding:8px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);font-size:.78rem;animation:slideUp .25s ease;pointer-events:none;z-index:999}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.btn{padding:6px 14px;border-radius:var(--rs);font-size:.78rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);transition:all .12s;font-family:inherit}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{opacity:.85}
+.btn-d{background:rgba(248,113,113,.08);color:#f87171;border-color:rgba(248,113,115,.2)}.btn-d:hover{background:rgba(248,113,115,.15)}
+.btn-s{padding:4px 10px;font-size:.72rem}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--bg3);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer}
+input[type=text],input[type=number],select{width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:.82rem;outline:none;font-family:inherit}
+input:focus,select:focus{border-color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.pad{padding:16px}.pad-sm{padding:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--bg3);border-radius:var(--rs);padding:8px 12px;text-align:center}
+.stat .v{font-size:1.2rem;font-weight:700;color:var(--accent)}.stat .l{font-size:.65rem;color:var(--muted);margin-top:2px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.pt{font-size:.82rem;font-weight:600;margin-bottom:8px}
+.hint{font-size:.7rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar"></div>
+  <div id="main">
+    <div id="toolbar"><h2 id="toolTitle">Welcome</h2><div class="spacer"></div><span class="hint" id="toolHint"></span></div>
+    <div id="workspace"></div>
+  </div>
+</div>
+
+<script>
+const W = document.getElementById('workspace');
+const TB = document.getElementById('toolTitle');
+const TH = document.getElementById('toolHint');
+const SB = document.getElementById('sidebar');
+
+function msg(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2200)}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function rand(a,b){return Math.random()*(b-a)+a}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v))}
+const TAU=Math.PI*2;
+
+// TOOL REGISTRY
+const tools = [
+  {id:'particles',ic:'🌌',name:'Particle Universe',cat:'Render',hint:'Click to attract, right-click to repel'},
+  {id:'neural',ic:'🧠',name:'Neural Sandbox',cat:'AI',hint:'Watch neurons learn in real-time'},
+  {id:'fluid',ic:'🌊',name:'Fluid Sim',cat:'Physics',hint:'Click-drag to stir the fluid'},
+  {id:'gravity',ic:'🕳️',name:'Gravity Well',cat:'Physics',hint:'Click to create gravity wells'},
+  {id:'waves',ic:'〰️',name:'Wave Lab',cat:'Physics',hint:'Click to drop ripples'},
+  {id:'life',ic:'🦠',name:"Conway's Life",cat:'Automata',hint:'Click to toggle cells, Space to play'},
+  {id:'fractal',ic:'🔮',name:'Fractal Zoom',cat:'Math',hint:'Scroll to zoom, drag to pan'},
+  {id:'lissajous',ic:'♾️',name:'Lissajous',cat:'Math',hint:'Adjust sliders to morph curves'},
+  {id:'spirograph',ic:'🌀',name:'Spirograph',cat:'Math',hint:'Adjust radius and speed'},
+  {id:'sorting',ic:'📊',name:'Sort Viz',cat:'Algo',hint:'Watch sorting algorithms race'},
+  {id:'pathfind',ic:'🗺️',name:'Pathfinding',cat:'Algo',hint:'Click to place start/end, then find path'},
+  {id:'maze',ic:'🧩',name:'Maze Gen',cat:'Algo',hint:'Generate and solve mazes'},
+  {id:'paint',ic:'🖌️',name:'Paint',cat:'Draw',hint:'Click-drag to paint'},
+  {id:'terrain',ic:'⛰️',name:'Terrain Gen',cat:'Procedural',hint:'Procedural terrain with biomes'},
+  {id:'matrix',ic:'💚',name:'Matrix Rain',cat:'Effects',hint:'The classic'},
+  {id:'plasma',ic:'🟣',name:'Plasma',cat:'Effects',hint:'Retro plasma effect'},
+  {id:'fire',ic:'🔥',name:'Fire Sim',cat:'Effects',hint:'Click to ignite'},
+  {id:'synth',ic:'🎹',name:'Synth',cat:'Audio',hint:'Click keys or use keyboard'},
+  {id:'viz',ic:'🎵',name:'Audio Viz',cat:'Audio',hint:'Visualize microphone input'},
+  {id:'clock',ic:'🕐',name:'Clock',cat:'Widget',hint:'Analog + digital'},
+  {id:'calc',ic:'🔢',name:'Calculator',cat:'Widget',hint:'Full-featured calculator'},
+  {id:'todo',ic:'✅',name:'Todo',cat:'Widget',hint:'Task list with persistence'},
+  {id:'qr',ic:'📱',name:'QR Gen',cat:'Encode',hint:'Generate QR codes'},
+  {id:'color',ic:'🎨',name:'Color Lab',cat:'Design',hint:'Color picker + harmony'},
+  {id:'gradient',ic:'🌈',name:'Gradients',cat:'Design',hint:'CSS gradient generator'},
+];
+
+// Build sidebar
+const cats={};
+tools.forEach(t=>{if(!cats[t.cat])cats[t.cat]=[];cats[t.cat].push(t)});
+Object.keys(cats).forEach(cat=>{
+  const s=document.createElement('div');s.className='title';s.textContent=cat;SB.appendChild(s);
+  cats[cat].forEach(t=>{
+    const d=document.createElement('div');d.className='nav-item';d.dataset.id=t.id;
+    d.innerHTML=`<span class="ic">${t.ic}</span><span>${t.name}</span>`;
+    d.onclick=()=>loadTool(t);SB.appendChild(d);
+  });
+});
+
+let currentTool=null;
+let animId=null;
+
+// Load tool
+function loadTool(t){
+  currentTool=t;
+  TB.textContent=t.ic+' '+t.name;
+  TH.textContent=t.hint||'';
+  W.innerHTML='';
+  if(animId){cancelAnimationFrame(animId);animId=null}
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.id===t.id));
+  const fn=toolFns[t.id];if(fn)fn();
+}
+
+// ============================================
+// TOOL: Particle Universe
+// ============================================
+toolFns={};
+toolFns.particles=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let P=[],mode='attract',mouse={x:-999,y:-999};
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  for(let i=0;i<400;i++)P.push({x:rand(0,c.width),y:rand(0,c.height),vx:rand(-.5,.5),vy:rand(-.5,.5),h:rand(180,280),s:rand(.4,1),r:rand(1.5,3.5)});
+  c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top});
+  c.addEventListener('mousedown',e=>{if(e.button===2)mode='repel';else mode='attract();e.preventDefault()});
+  c.addEventListener('mouseup',()=>mode='none');
+  c.addEventListener('mouseleave',()=>{mouse.x=-999;mouse.y=-999;mode='none'});
+  c.addEventListener('contextmenu',e=>e.preventDefault());
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(0,0,c.width,c.height);
+    for(const p of P){
+      const dx=mouse.x-p.x,dy=mouse.y-p.y,d=Math.hypot(dx,dy);
+      if(d<150&&mode!=='none'){
+        const f=((150-d)/150)*.03*(mode==='attract'?1:-1);
+        p.vx+=dx/(d+1)*f;p.vy+=dy/(d+1)*f;
+      }
+      p.vx*=.995;p.vy*=.995;
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>c.width)p.vx*=-1;if(p.y<0||p.y>c.height)p.vy*=-1;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,TAU);
+      ctx.fillStyle=`hsla(${p.h},80%,60%,${p.s})`;ctx.fill();
+    }
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Neural Sandbox
+// ============================================
+toolFns.neural=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let nodes=[],connections=[],learning=false,lr=0.01;
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight;initNet()}
+  resize();window.addEventListener('resize',resize);
+  function initNet(){
+    nodes=[];
+    const layers=[4,6,6,3];
+    const sx=c.width/(layers.length+1);
+    layers.forEach((cnt,i)=>{
+      const sy=c.height/(cnt+1);
+      for(let j=0;j<cnt;j++)nodes.push({x:sx*(i+1),y:sy*(j+1),a:0,bi:rand(-.5,.5),h:i});
+    });
+    connections=[];for(let i=0;i<nodes.length;i++)for(let j=0;j<nodes.length;j++)if(nodes[j].h===nodes[i].h+1)connections.push({a:i,b:j,w:rand(-1,1)});
+  }
+  function sigmoid(x){return 1/(1+Math.exp(-x))}
+  function forward(input){
+    nodes.forEach(n=>{n.a=n.bi;});
+    for(let l=1;l<4;l++){
+      const layer=nodes.filter(n=>n.h===l);
+      const prev=nodes.filter(n=>n.h===l-1);
+      layer.forEach(node=>{
+        let sum=node.bi;
+        prev.forEach(p=>{const c=connections.find(x=>x.a===nodes.indexOf(p)&&x.b===nodes.indexOf(node));if(c)sum+=p.a*c.w;});
+        node.a=sigmoid(sum);
+      });
+    }
+  }
+  function train(){
+    const target=[rand(0,1),rand(0,1),rand(0,1)];
+    forward([0,0,0,0]);
+    // Simple random perturbation learning
+    connections.forEach(c=>{c.w+=rand(-.05,.05);c.w=clamp(c.w,-2,2)});
+    if(Math.random()<.01)nodes.forEach(n=>{clamp(n.bi+rand(-.1,.1),-1,1)});
+  }
+  W.innerHTML+=`<div class="pad" style="position:absolute;top:0;left:0;right:0;display:flex;gap:8px;flex-wrap:wrap;z-index:10">
+    <button class="btn btn-p" id="nTrain">Train</button>
+    <button class="btn btn-d" id="nReset">Reset</button>
+    <label class="hint">LR:<input type="range" id="nLR" min="0.001" max="0.5" value="0.01" step="0.001" style="width:80px"></label>
+    <span class="hint">Epochs: <span id="nEpoch">0</span></span>
+  </div>`;
+  let epoch=0;
+  document.getElementById('nTrain').onclick=()=>{
+    learning=!learning;
+    document.getElementById('nTrain').textContent=learning?'Stop':'Train';
+  };
+  document.getElementById('nReset').onclick=()=>{epoch=0;initNet();};
+  document.getElementById('nLR').oninput=e=>lr=parseFloat(e.target.value);
+  function draw(){
+    ctx.fillStyle='#050510';ctx.fillRect(0,0,c.width,c.height);
+    // Draw connections
+    connections.forEach(conn=>{
+      const na=nodes[conn.a],nb=nodes[conn.b];
+      const brightness=Math.abs(conn.w)*40;
+      ctx.strokeStyle=`rgba(123,93,255,${clamp(brightness/255,.05,.5)})`;
+      ctx.lineWidth=clamp(Math.abs(conn.w)*1.5,.3,3);
+      ctx.beginPath();ctx.moveTo(na.x,na.y);ctx.lineTo(nb.x,nb.y);ctx.stroke();
+    });
+    // Draw nodes
+    nodes.forEach(n=>{
+      const r=8+n.a*6;
+      const col=n.h===0?'#7b5cff':n.h===1?'#ff5c8b':n.h===2?'#34d399':'#fbbf24';
+      ctx.beginPath();ctx.arc(n.x,n.y,r,0,TAU);
+      ctx.fillStyle=col;ctx.fill();
+      ctx.beginPath();ctx.arc(n.x,n.y+r+3,0,TAU);
+      ctx.fillStyle=`${clamp(60+n.a*195|0,0,255)}`;ctx.font=`10px monospace`;
+    });
+    // Label layers
+    ['Input','Hidden 1','Hidden 2','Output'].forEach((label,i)=>{
+      const sx=c.width/5*(i+1)+c.width/10;
+      ctx.fillStyle='#9090b0';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText(label,sx,c.height-8);
+    });
+    if(learning){train();epoch++;document.getElementById('nEpoch').textContent=epoch;}
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Fluid Simulation (simplified Navier-Stokes)
+// ============================================
+toolFns.fluid=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let grid=[],N=80,dt=0.1,visc=0.0001;
+  function init(){grid=[];for(let i=0;i<N*N;i++)grid.push({vx:0,vy:0,d:0})}
+  init();
+  function IX(x,y){return clamp(x|0,0,N-1)+clamp(y|0,0,N-1)*N}
+  function addD(x,y,amount){grid[IX(x,y)].d+=amount}
+  function addV(x,y,amountX,amountY){const i=IX(x,y);grid[i].vx+=amountX;grid[i].vy+=amountY}
+  function step(){
+    for(let iter=0;iter<4;iter++){
+      for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){
+        const i=IX(x,y),v=grid[i],l=grid[IX(x-1,y)],r=grid[IX(x+1,y)],u=grid[IX(x,y-1)],d=grid[IX(x,y+1)];
+        const div=(r.vx-l.vx+d.vy-u.vy)*.25;
+        v.vx+=(l.vy+u.vy-r.vy-d.vy)*visc*4;
+        v.vy+=(r.vx+u.vx-l.vx-d.vx)*visc*4;
+      }
+    }
+  }
+  c.addEventListener('mousemove',e=>{
+    const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*N,y=(e.clientY-r.top)/r.height*N;
+    addD(x,y,5);addV(x,y,rand(-2,2),rand(-2,2));
+  });
+  c.addEventListener('click',e=>{
+    const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*N,y=(e.clientY-r.top)/r.height*N;
+    for(let i=-5;i<=5;i++)for(let j=-5;j<=5;j++)addD(x+i,y+j,3);
+  });
+  function draw(){
+    step();
+    const img=ctx.createImageData(c.width,c.height);
+    for(let py=0;py<c.height;py++)for(let px=0;px<c.width;px++){
+      const v=grid[IX(px/c.width*N,py/c.height*N)];
+      const idx=(py*c.width+px)*4;
+      const d=clamp(v.d*40,0,255);
+      img.data[idx]=clamp(d*.3,0,255);img.data[idx+1]=clamp(d*.5,0,255);img.data[idx+2]=clamp(d,200,255);img.data[idx+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    animId=requestAnimationFrame(draw);
+  }
+  init();draw();
+};
+
+// ============================================
+// TOOL: Gravity Well
+// ============================================
+toolFns.gravity=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let wells=[],particles=[];
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  for(let i=0;i<1000;i++)particles.push({x:rand(0,c.width),y:rand(0,c.height),vx:rand(-.3,.3),vy:rand(-.3,.3),life:rand(200,600)});
+  c.addEventListener('click',e=>{
+    const r=c.getBoundingClientRect();
+    wells.push({x:e.clientX-r.left,y:e.clientY-r.top,mass:rand(200,800),hue:rand(0,360)});
+    if(wells.length>8)wells.shift();
+  });
+  c.addEventListener('contextmenu',e=>{e.preventDefault();wells.pop()});
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(0,0,c.width,c.height);
+    for(const p of particles){
+      for(const w of wells){
+        const dx=w.x-p.x,dy=w.y-p.y,d=Math.max(20,Math.hypot(dx,dy));
+        const f=w.mass/(d*d)*.5;
+        p.vx+=dx/d*f;p.vy+=dy/d*f;
+      }
+      p.x+=p.vx;p.y+=p.vy;p.life--;
+      if(p.life<=0||p.x<-50||p.x>c.width+50||p.y<-50||p.y>c.height+50){p.x=rand(0,c.width);p.y=rand(0,c.height);p.vx=rand(-.3,.3);p.vy=rand(-.3,.3);p.life=rand(200,600);}
+      const speed=Math.hypot(p.vx,p.vy);
+      ctx.beginPath();ctx.arc(p.x,p.y,clamp(speed*2,.5,3),0,TAU);
+      ctx.fillStyle=`hsla(${200+speed*30},80%,60%,${clamp(p.life/600,.1,.8)})`;ctx.fill();
+    }
+    for(const w of wells){
+      const grd=ctx.createRadialGradient(w.x,w.y,0,w.x,w.y,Math.sqrt(w.mass)*2);
+      grd.addColorStop(0,`hsla(${w.hue},80%,60%,.8)`);grd.addColorStop(.5,`hsla(${w.hue},80%,40%,.3)`);grd.addColorStop(1,'transparent');
+      ctx.beginPath();ctx.arc(w.x,w.y,Math.sqrt(w.mass)*2,0,TAU);ctx.fillStyle=grd;ctx.fill();
+    }
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Wave Lab
+// ============================================
+toolFns.waves=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let grid=[],N=100;
+  function init(){grid=[];for(let i=0;i<N*N;i++)grid.push({v:0,a:0})}
+  init();
+  function resize(){c.width=c.offsetWidth;c.height=c.height}
+  resize();window.addEventListener('resize',resize);
+  c.addEventListener('click',e=>{
+    const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*N|0,y=(e.clientY-r.top)/r.height*N|0;
+    for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++){const idx=clamp(x+i,0,N-1)+clamp(y+j,0,N-1)*N;grid[idx].v+=50}
+  });
+  function step(){
+    for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){
+      const i=y*N+x;grid[i].a=(grid[i-1].v+grid[i+1].v+grid[i-N].v+grid[i+N].v)/4-grid[i].v;
+    }
+    for(let i=0;i<N*N;i++){grid[i].v+=grid[i].a*.99;grid[i].v*=.995}
+  }
+  function draw(){
+    step();step();
+    const img=ctx.createImageData(c.width,c.height);
+    for(let py=0;py<c.height;py++)for(let px=0;px<c.width;px++){
+      const v=grid[[(px/c.width*N)|0,(py/c.height*N)|0].reduce((a,i)=>a+i*N,0)]||grid[0];
+      const idx=(py*c.width+px)*4;const b=clamp(128+v.v*3,0,255);
+      img.data[idx]=clamp(b*.2,0,255);img.data[idx+1]=clamp(b*.5,0,255);img.data[idx+2]=b;img.data[idx+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Conway's Game of Life
+// ============================================
+toolFns.life=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#0a0a12';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let grid,playing=false,speed=10;
+  const S=4;
+  function init(){grid=[];for(let y=0;y<c.height/S;y++){grid[y]=[];for(let x=0;x<c.width/S;x++)grid[y][x]=Math.random()<.15?1:0}}
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight;init()}
+  resize();window.addEventListener('resize',resize);
+  function step(){
+    const ng=[];for(let y=0;y<grid.length;y++){ng[y]=[];for(let x=0;x<grid[0].length;x++){
+      let n=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(dx===0&&dy===0)continue;const ny=(y+dy+grid.length)%grid.length,nx=(x+dx+grid[0].length)%grid[0].length;n+=grid[ny][nx]}
+      ng[y][x]=(grid[y][x]&&(n===2||n===3))||(!grid[y][x]&&n===3)?1:0;
+    }}grid=ng;
+  }
+  c.addEventListener('click',e=>{
+    const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/S|0,y=(e.clientY-r.top)/S|0;
+    if(grid[y]&&grid[y][x]!==undefined)grid[y][x]=1-grid[y][x];
+  });
+  document.addEventListener('keydown',e=>{if(e.code==='Space'){playing=!playing;e.preventDefault()}});
+  W.innerHTML+=`<div class="pad" style="position:absolute;top:0;left:0;right:0;display:flex;gap:8px;z-index:10">
+    <button class="btn btn-p" id="lPlay">Play</button>
+    <button class="btn" id="lStep">Step</button>
+    <button class="btn btn-d" id="lClear">Clear</button>
+    <button class="btn" id="lRand">Random</button>
+    <span class="hint">Speed:<input type="range" id="lSp" min="1" max="60" value="10" style="width:60px"></span>
+    <span class="hint">Gen: <span id="lGen">0</span></span>
+  </div>`;
+  let gen=0;
+  document.getElementById('lPlay').onclick=()=>{playing=!playing;document.getElementById('lPlay').textContent=playing?'Pause':'Play'};
+  document.getElementById('lStep').onclick=()=>{step();gen++;document.getElementById('lGen').textContent=gen};
+  document.getElementById('lClear').onclick=()=>{init();gen=0};
+  document.getElementById('lRand').onclick=()=>{init();gen=0};
+  document.getElementById('lSp').oninput=e=>speed=parseInt(e.target.value);
+  let lastTime=0;
+  function draw(timestamp){
+    ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,c.width,c.height);
+    for(let y=0;y<grid.length;y++)for(let x=0;x<grid[0].length;x++){
+      if(grid[y][x]){ctx.fillStyle=`hsla(${180+y*2+x},70%,55%,.9)`;ctx.fillRect(x*S,y*S,S-1,S-1)}
+    }
+    if(playing&&timestamp-lastTime>1000/speed){step();gen++;document.getElementById('lGen').textContent=gen;lastTime=timestamp;}
+    animId=requestAnimationFrame(draw);
+  }
+  init();animId=requestAnimationFrame(draw);
+};
+
+// ============================================
+// TOOL: Fractal Zoom (Mandelbrot)
+// ============================================
+toolFns.fractal=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let cx=-.7,cy=0,zoom=1,maxIter=100;
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight;render()}
+  resize();window.addEventListener('resize',resize);
+  function render(){
+    const img=ctx.createImageData(c.width,c.height);
+    for(let py=0;py<c.height;py++)for(let px=0;px<c.width;px++){
+      let x0=(px/c.width-.5)*3/zoom+cx,y0=(py/c.height-.5)*3/zoom+cy;
+      let x=0,y=0,iter=0;
+      while(x*x+y*y<4&&iter<maxIter){const xt=x*x-y*y+x0;y=2*x*y+y0;x=xt;iter++;}
+      const idx=(py*c.width+px)*4;
+      if(iter===maxIter){img.data[idx]=0;img.data[idx+1]=0;img.data[idx+2]=0;img.data[idx+3]=255}
+      else{const t=iter/maxIter;img.data[idx]=(Math.sin(t*10)*127+128)|0;img.data[idx+1]=(Math.sin(t*20+2)*127+128)|0;img.data[idx+2]=(Math.sin(t*30+4)*127+128)|0;img.data[idx+3]=255}
+    }
+    ctx.putImageData(img,0,0);
+  }
+  let dragging=false,startX,startY;
+  c.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startY=e.clientY});
+  c.addEventListener('mousemove',e=>{if(!dragging)return;cx-=(e.clientX-startX)/c.width*3/zoom;cy-=(e.clientY-startY)/c.height*3/zoom;startX=e.clientX;startY=e.clientY;render()});
+  c.addEventListener('mouseup',()=>dragging=false);
+  c.addEventListener('wheel',e=>{e.preventDefault();zoom*=e.deltaY<0?1.15:.87;render()},{passive:false});
+  render();
+};
+
+// ============================================
+// TOOL: Lissajous Curves
+// ============================================
+toolFns.lissajous=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let a=3,b=2,d=Math.PI/2,speed=.02,phase=0;
+  W.innerHTML+=`<div class="pad" style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:12px;flex-wrap:wrap;z-index:10;background:rgba(8,8,15,.9);backdrop-filter:blur(8px)">
+    <span class="hint">A:<input type="range" id="ljA" min="1" max="7" value="3" style="width:60px"></span>
+    <span class="hint">B:<input type="range" id="ljB" min="1" max="7" value="2" style="width:60px"></span>
+    <span class="hint">δ:<input type="range" id="ljD" min="0" max="6.28" value="1.57" step="0.01" style="width:60px"></span>
+    <span class="hint">Speed:<input type="range" id="ljS" min="0.005" max="0.1" value="0.02" step="0.005" style="width:60px"></span>
+  </div>`;
+  document.getElementById('ljA').oninput=e=>a=parseInt(e.target.value);
+  document.getElementById('ljB').oninput=e=>b=parseInt(e.target.value);
+  document.getElementById('ljD').oninput=e=>d=parseFloat(e.target.value);
+  document.getElementById('ljS').oninput=e=>speed=parseFloat(e.target.value);
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.06)';ctx.fillRect(0,0,c.width,c.height);
+    const cx=c.width/2,cy=c.height/2,r=Math.min(cx,cy)*.8;
+    phase+=speed;
+    ctx.beginPath();
+    for(let t=0;t<TAU;t+=.01){
+      const x=cx+r*Math.sin(a*t+d+phase);
+      const y=cy+r*Math.sin(b*t);
+      t===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=`hsla(${(phase*30)%360},80%,60%,.8)`;ctx.lineWidth=2;ctx.stroke();
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Spirograph
+// ============================================
+toolFns.spirograph=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let R=100,r=35,d=50,speed=.03,angle=0;
+  W.innerHTML+=`<div class="pad" style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:12px;flex-wrap:wrap;z-index:10;background:rgba(8,8,15,.9);backdrop-filter:blur(8px)">
+    <span class="hint">R:<input type="range" id="spR" min="20" max="200" value="100" style="width:60px"></span>
+    <span class="hint">r:<input type="range" id="spR2" min="5" max="100" value="35" style="width:60px"></span>
+    <span class="hint">d:<input type="range" id="spD" min="5" max="100" value="50" style="width:60px"></span>
+    <span class="hint">Speed:<input type="range" id="spS" min="0.005" max="0.1" value="0.03" step="0.005" style="width:60px"></span>
+  </div>`;
+  document.getElementById('spR').oninput=e=>R=parseInt(e.target.value);
+  document.getElementById('spR2').oninput=e=>r=parseInt(e.target.value);
+  document.getElementById('spD').oninput=e=>d=parseInt(e.target.value);
+  document.getElementById('spS').oninput=e=>speed=parseFloat(e.target.value);
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.03)';ctx.fillRect(0,0,c.width,c.height);
+    const cx=c.width/2,cy=c.height/2;
+    angle+=speed;
+    ctx.beginPath();
+    for(let t=0;t<TAU*10;t+=.05){
+      const x=cx+(R-r)*Math.cos(t)+d*Math.cos((R-r)/r*t+angle);
+      const y=cy+(R-r)*Math.sin(t)-d*Math.sin((R-r)/r*t+angle);
+      t===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=`hsla(${(angle*20)%360},75%,55%,.7)`;ctx.lineWidth=1.5;ctx.stroke();
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Sorting Visualizer
+// ============================================
+toolFns.sorting=function(){
+  W.innerHTML=`<div class="pad"><div class="pt">Sorting Visualizer</div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn btn-p" id="sGen">New Array</button>
+      <button class="btn" id="sBubble">Bubble</button>
+      <button class="btn" id="sQuick">Quick</button>
+      <button class="btn" id="sMerge">Merge</button>
+      <button class="btn" id="sHeap">Heap</button>
+      <select id="sSize"><option value="30">30</option><option value="50" selected>50</option><option value="80">80</option><option value="120">120</option></select>
+      <span class="hint">Speed:<input type="range" id="sSp" min="1" max="100" value="50" style="width:60px"></span>
+    </div>
+    <canvas id="sC" style="width:100%;height:300px;background:#0a0a12;border-radius:8px"></canvas>
+    <div class="row" style="margin-top:8px"><span class="hint">Comparisons: <span id="sComp">0</span></span><span class="hint">Swaps: <span id="sSwap">0</span></span></div>
+  </div>`;
+  const canvas=document.getElementById('sC');
+  const ctx=canvas.getContext('2d');
+  let arr=[],sorting=false,comparisons=0,swaps=0,delay=50;
+  function resize(){canvas.width=W.offsetWidth-32;canvas.height=300;draw()}
+  resize();
+  function genArr(){arr=[];const n=parseInt(document.getElementById('sSize').value);for(let i=0;i<n;i++)arr.push(rand(10,290));comparisons=0;swaps=0;draw()}
+  function draw(){
+    ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,canvas.width,canvas.height);
+    const w=canvas.width/arr.length;
+    arr.forEach((v,i)=>{const h=v;const hue=sorting?360*v/300:200;ctx.fillStyle=`hsl(${hue},70%,55%)`;ctx.fillRect(i*w,canvas.height-h,w-1,h)});
+    document.getElementById('sComp').textContent=comparisons;document.getElementById('sSwap').textContent=swaps;
+  }
+  async function sleep(){await new Promise(r=>setTimeout(r,Math.max(1,101-delay)))}
+  async function bubbleSort(){for(let i=0;i<arr.length;i++){for(let j=0;j<arr.length-i-1;j++){comparisons++;if(arr[j]>arr[j+1]){[arr[j],arr[j+1]]=[arr[j+1],arr[j]];swaps++;draw();await sleep()}}}}
+  async function quickSort(low=0,high=arr.length-1){if(low<high){const pi=await partition(low,high);await quickSort(low,pi-1);await quickSort(pi+1,high)}}
+  async function partition(low,high){const pivot=arr[high];let i=low-1;for(let j=low;j<high;j++){comparisons++;if(arr[j]<pivot){i++;[arr[i],arr[j]]=[arr[j],arr[i]];swaps++;draw();await sleep()}}[arr[i+1],arr[high]]=[arr[high],arr[i+1]];swaps++;draw();return i+1}
+  async function mergeSort(l=0,r=arr.length-1){if(l<r){const m=(l+r)/2|0;await mergeSort(l,m);await mergeSort(m+1,r);await merge(l,m,r)}}
+  async function merge(l,m,r){const L=arr.slice(l,m+1),R=arr.slice(m+1,r+1);let i=0,j=0,k=l;while(i<L.length&&j<R.length){comparisons++;if(L[i]<=R[j])arr[k++]=L[i++];else{arr[k++]=R[j++];swaps++;draw();await sleep()}}while(i<L.length)arr[k++]=L[i++];while(j<R.length)arr[k++]=R[j++];draw()}
+  async function heapSort(){const n=arr.length;for(let i=n/2-1;i>=0;i--){await heapify(n,i)}for(let i=n-1;i>0;i--){[arr[0],arr[i]]=[arr[i],arr[0]];swaps++;draw();await sleep();await heapify(i,0)}}
+  async function heapify(n,i){let largest=i,l=2*i+1,r=2*i+2;if(l<n&&arr[l]>arr[largest])largest=l;if(r<n&&arr[r]>arr[largest])largest=r;if(largest!==i){[arr[i],arr[largest]]=[arr[largest],arr[i]];swaps++;draw();await sleep();await heapify(n,largest)}}
+  document.getElementById('sGen').onclick=()=>{sorting=false;genArr()};
+  document.getElementById('sBubble').onclick=async()=>{if(sorting)return;sorting=true;delay=parseInt(document.getElementById('sSp').value);await bubbleSort();sorting=false};
+  document.getElementById('sQuick').onclick=async()=>{if(sorting)return;sorting=true;delay=parseInt(document.getElementById('sSp').value);await quickSort();sorting=false};
+  document.getElementById('sMerge').onclick=async()=>{if(sorting)return;sorting=true;delay=parseInt(document.getElementById('sSp').value);await mergeSort();sorting=false};
+  document.getElementById('sHeap').onclick=async()=>{if(sorting)return;sorting=true;delay=parseInt(document.getElementById('sSp').value);await heapSort();sorting=false};
+  genArr();
+};
+
+// ============================================
+// TOOL: Pathfinding Visualizer
+// ============================================
+toolFns.pathfind=function(){
+  W.innerHTML=`<div class="pad"><div class="pt">Pathfinding Visualizer</div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn btn-p" id="pfFind">Find Path (A*)</button>
+      <button class="btn" id="pfMaze">Generate Maze</button>
+      <button class="btn btn-d" id="pfClear">Clear</button>
+      <span class="hint">Click: place start (1st), end (2nd), walls (after)</span>
+    </div>
+    <canvas id="pfC" style="width:100%;height:350px;background:#0a0a12;border-radius:8px"></canvas>
+  </div>`;
+  const canvas=document.getElementById('pfC');
+  const ctx=canvas.getContext('2d');
+  const COLS=40,ROWS=22;let grid,start,end,phase=0;
+  function resize(){canvas.width=W.offsetWidth-32;canvas.height=350;init()}
+  resize();
+  function init(){grid=[];for(let y=0;y<ROWS;y++){grid[y]=[];for(let x=0;x<COLS;x++)grid[y][x]={wall:false,visited:false,path:false,g:0,h:0,f:0,parent:null}}start={x:2,y:2};end={x:COLS-3,y:ROWS-3};phase=0;draw()}
+  function draw(){
+    const cw=canvas.width/COLS,ch=canvas.height/ROWS;
+    ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,canvas.width,canvas.height);
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      const c=grid[y][x];const px=x*cw,py=y*ch;
+      if(x===start.x&&y===start.y)ctx.fillStyle='#34d399';else if(x===end.x&&y===end.y)ctx.fillStyle='#f87171';
+      else if(c.path)ctx.fillStyle='#fbbf24';else if(c.visited)ctx.fillStyle='rgba(123,93,255,.3)';else if(c.wall)ctx.fillStyle='#303050';else ctx.fillStyle='#12121e';
+      ctx.fillRect(px,py,cw-1,ch-1);
+    }
+  }
+  canvas.addEventListener('click',e=>{
+    const r=canvas.getBoundingClientRect(),x=((e.clientX-r.left)/canvas.width*COLS)|0,y=((e.clientY-r.top)/canvas.height*ROWS)|0;
+    if(x<0||x>=COLS||y<0||y>=ROWS)return;
+    if(phase===0){start={x,y};phase=1}else if(phase===1){end={x,y};phase=2}else{grid[y][x].wall=!grid[y][x].wall}draw();
+  });
+  function heuristic(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)}
+  async function aStar(){
+    const open=[start];start.g=0;start.h=heuristic(start,end);start.f=start.h;
+    while(open.length>0){
+      open.sort((a,b)=>a.f-b.f);const current=open.shift();if(current.x===end.x&&current.y===end.y){
+        let c=end;while(c){c.path=true;c=c.parent;draw();await new Promise(r=>setTimeout(r,20))}return;
+      }
+      current.visited=true;const dirs=[[0,1],[1,0],[0,-1],[-1,0]];
+      for(const[dx,dy] of dirs){const nx=current.x+dx,ny=current.y+dy;if(nx<0||nx>=COLS||ny<0||ny>=ROWS)continue;const n=grid[ny][nx];if(n.wall||n.visited)continue;const tg=current.g+1;if(!open.find(p=>p.x===nx&&p.y===ny)||tg<n.g){n.g=tg;n.h=heuristic({x:nx,y:ny},end);n.f=n.g+n.h;n.parent=current;if(!open.find(p=>p.x===nx&&p.y===ny))open.push({x:nx,y:ny})}}
+      draw();await new Promise(r=>setTimeout(r,15));
+    }
+    msg('No path found');
+  }
+  function genMaze(){for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)grid[y][x].wall=Math.random()<.25;grid[start.y][start.x].wall=false;grid[end.y][end.x].wall=false;draw()}
+  document.getElementById('pfFind').onclick=aStar;document.getElementById('pfMaze').onclick=genMaze;document.getElementById('pfClear').onclick=init;
+  init();
+};
+
+// ============================================
+// TOOL: Maze Generator
+// ============================================
+toolFns.maze=function(){
+  W.innerHTML=`<div class="pad"><div class="pt">Maze Generator & Solver</div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn btn-p" id="mzGen">Generate</button>
+      <button class="btn" id="mzSolve">Solve (DFS)</button>
+      <button class="btn btn-d" id="mzClear">Clear</button>
+      <select id="mzAlgo"><option value="dfs">DFS</option><option value="bfs">BFS</option><option value="astar">A*</option></select>
+    </div>
+    <canvas id="mzC" style="width:100%;height:350px;background:#0a0a12;border-radius:8px"></canvas>
+  </div>`;
+  const canvas=document.getElementById('mzC');
+  const ctx=canvas.getContext('2d');
+  const W_=20,H_=16,cell=20;let maze,solved=false;
+  function resize(){canvas.width=W_*cell;canvas.height=H_*cell;generate()}
+  resize();
+  function generate(){
+    maze=[];for(let y=0;y<H_;y++){maze[y]=[];for(let x=0;x<W_;x++)maze[y][x]={walls:[true,true,true,true],visited:false,path:false}}}
+    const stack=[{x:0,y:0}];maze[0][0].visited=true;
+    while(stack.length){
+      const c=stack[stack.length-1],dirs=[[0,-1,0,2],[1,0,1,3],[0,1,2,0],[-1,0,3,1]],valid=[];
+      for(const[dx,dy,wd,op] of dirs){const nx=c.x+dx,ny=c.y+dy;if(nx>=0&&nx<W_&&ny>=0&&ny<H_&&!maze[ny][nx].visited)valid.push({x:nx,y:ny,wd,op})}
+      if(valid.length){const n=valid[randInt(0,valid.length-1)];maze[c.y][c.x].walls[n.wd]=false;maze[n.y][n.x].walls[n.op]=false;maze[n.y][n.x].visited=true;stack.push({x:n.x,y:n.y})}else stack.pop();
+    }
+    solved=false;draw();
+  }
+  function draw(){
+    ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,canvas.width,canvas.height);
+    for(let y=0;y<H_;y++)for(let x=0;x<W_;x++){
+      const m=maze[y][x],px=x*cell,py=y*cell;
+      if(m.path){ctx.fillStyle='rgba(251,191,36,.4)';ctx.fillRect(px,py,cell,cell)}
+      ctx.strokeStyle='#7b5cff';ctx.lineWidth=2;
+      if(m.walls[0]){ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+cell,py);ctx.stroke()}
+      if(m.walls[1]){ctx.beginPath();ctx.moveTo(px+cell,py);ctx.lineTo(px+cell,py+cell);ctx.stroke()}
+      if(m.walls[2]){ctx.beginPath();ctx.moveTo(px,py+cell);ctx.lineTo(px+cell,py+cell);ctx.stroke()}
+      if(m.walls[3]){ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,py+cell);ctx.stroke()}
+    }
+    ctx.fillStyle='#34d399';ctx.fillRect(1,1,cell-2,cell-2);
+    ctx.fillStyle='#f87171';ctx.fillRect((W_-1)*cell+1,(H_-1)*cell+1,cell-2,cell-2);
+  }
+  async function solve(algo){
+    for(let y=0;y<H_;y++)for(let x=0;x<W_;x++)maze[y][x].path=false;
+    const start={x:0,y:0},end={x:W_-1,y:H_-1};
+    if(algo==='dfs'){const stack=[start];while(stack.length){const c=stack.pop();if(c.x===end.x&&c.y===end.y){let cur=c;while(cur){maze[cur.y][cur.x].path=true;cur=cur.parent}draw();return}maze[c.y][c.x].visited=true;const dirs=[[0,-1,0],[1,0,1],[0,1,2],[-1,0,3]];for(const[dx,dy,wd] of dirs){const nx=c.x+dx,ny=c.y+dy;if(nx>=0&&nx<W_&&ny>=0&&ny<H_&&!maze[ny][nx].walls[wd]&&!maze[ny][nx].visited){maze[ny][nx].visited=true;maze[ny][nx].parent=c;stack.push({x:nx,y:ny})}}draw();await new Promise(r=>setTimeout(r,30))}}
+    else if(algo==='bfs'){const queue=[start];while(queue.length){const c=queue.shift();if(c.x===end.x&&c.y===end.y){let cur=c;while(cur){maze[cur.y][cur.x].path=true;cur=cur.parent}draw();return}maze[c.y][c.x].visited=true;const dirs=[[0,-1,0],[1,0,1],[0,1,2],[-1,0,3]];for(const[dx,dy,wd] of dirs){const nx=c.x+dx,ny=c.y+dy;if(nx>=0&&nx<W_&&ny>=0&&ny<H_&&!maze[ny][nx].walls[wd]&&!maze[ny][nx].visited){maze[ny][nx].visited=true;maze[ny][nx].parent=c;queue.push({x:nx,y:ny})}}draw();await new Promise(r=>setTimeout(r,30))}}
+    else{const open=[{...start,h:0,g:0,f:0}];while(open.length){open.sort((a,b)=>a.f-b.f);const c=open.shift();if(c.x===end.x&&c.y===end.y){let cur=c;while(cur){maze[cur.y][cur.x].path=true;cur=cur.parent}draw();return}maze[c.y][c.x].visited=true;const dirs=[[0,-1,0],[1,0,1],[0,1,2],[-1,0,3]];for(const[dx,dy,wd] of dirs){const nx=c.x+dx,ny=c.y+dy;if(nx>=0&&nx<W_&&ny>=0&&ny<H_&&!maze[ny][nx].walls[wd]&&!maze[ny][nx].visited){const g=c.g+1;const h=Math.abs(nx-end.x)+Math.abs(ny-end.y);maze[ny][nx].visited=true;maze[ny][nx].parent=c;open.push({x:nx,y:ny,g,h,f:g+h})}}draw();await new Promise(r=>setTimeout(r,30))}}
+    msg('No solution found');
+  }
+  document.getElementById('mzGen').onclick=generate;
+  document.getElementById('mzSolve').onclick=()=>solve(document.getElementById('mzAlgo').value);
+  document.getElementById('mzClear').onclick=generate;
+  generate();
+};
+
+// ============================================
+// TOOL: Paint
+// ============================================
+toolFns.paint=function(){
+  W.innerHTML=`<div class="pad"><div class="pt">Pixel Art Editor</div>
+    <div class="row" style="margin-bottom:10px">
+      <input type="color" id="pCol" value="#7b5cff" style="width:40px;height:30px;border:none;cursor:pointer;background:none">
+      <span class="hint">Size:<input type="range" id="pSize" min="2" max="20" value="4" style="width:60px"></span>
+      <button class="btn btn-s" id="pEraser">Eraser</button>
+      <button class="btn btn-d btn-s" id="pClear">Clear</button>
+      <button class="btn btn-p btn-s" id="pSave">Save PNG</button>
+    </div>
+    <canvas id="pC" style="width:100%;height:400px;background:#111;border-radius:8px;cursor:crosshair"></canvas>
+  </div>`;
+  const canvas=document.getElementById('pC');
+  const ctx=canvas.getContext('2d');
+  let drawing=false,color='#7b5cff',size=4;
+  function resize(){const img=ctx.getImageData(0,0,canvas.width,canvas.height);canvas.width=W.offsetWidth-32;canvas.height=400;ctx.putImageData(img,0,0)}
+  resize();ctx.fillStyle='#111';ctx.fillRect(0,0,canvas.width,canvas.height);
+  canvas.addEventListener('mousedown',e=>{drawing=true;draw(e)});
+  canvas.addEventListener('mousemove',e=>{if(drawing)draw(e)});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  function draw(e){const r=canvas.getBoundingClientRect();ctx.fillStyle=color;ctx.fillRect(e.clientX-r.left-size/2,e.clientY-r.top,size,size)}
+  document.getElementById('pCol').oninput=e=>color=e.target.value;
+  document.getElementById('pSize').oninput=e=>size=parseInt(e.target.value);
+  document.getElementById('pEraser').onclick=()=>color='#111';
+  document.getElementById('pClear').onclick=()=>ctx.fillStyle='#111';ctx.fillRect(0,0,canvas.width,canvas.height);
+  document.getElementById('pSave').onclick=()=>{const a=document.createElement('a');a.href=canvas.toDataURL();a.download='art.png';a.click()};
+};
+
+// ============================================
+// TOOL: Terrain Generator
+// ============================================
+toolFns.terrain=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  let seed=42,octaves=6,persistence=.5,lacunarity=2;
+  W.innerHTML+=`<div class="pad" style="position:absolute;bottom:0;left:0;right:0;display:flex;gap:12px;flex-wrap:wrap;z-index:10;background:rgba(8,8,15,.9);backdrop-filter:blur(8px)">
+    <button class="btn btn-p" id="tGen">Generate</button>
+    <span class="hint">Seed:<input type="number" id="tSeed" value="42" style="width:60px"></span>
+    <span class="hint">Octaves:<input type="range" id="tOct" min="1" max="8" value="6" style="width:50px"></span>
+    <span class="hint">Persist:<input type="range" id="tPer" min="0.1" max="0.9" value="0.5" step="0.05" style="width:50px"></span>
+  </div>`;
+  function resize(){c.width=c.offsetWidth;c.offsetHeight;c.height=c.offsetHeight;generate()}
+  resize();window.addEventListener('resize',resize);
+  function noise2D(x,y,s){const n=Math.sin(x*12.9898+y*78.233+s)*43758.5453;return n-Math.floor(n)}
+  function smoothNoise(x,y,s){const c=noise2D(Math.floor(x),Math.floor(y),s);const r=noise2D(Math.floor(x)+1,Math.floor(y),s);const b=noise2D(Math.floor(x),Math.floor(y)+1);const br=noise2D(Math.floor(x)+1,Math.floor(y)+1);const fx=x-Math.floor(x);const fy=y-Math.floor(y);return lerp(lerp(c,r,fx),lerp(b,br,fx),fy)}
+  function fbm(x,y,s,oct,pers,lac){let val=0,amp=1,freq=1;for(let i=0;i<oct;i++){val+=smoothNoise(x*freq,y*freq,s)*amp;amp*=pers;freq*=lac}return val}
+  function generate(){
+    seed=parseInt(document.getElementById('tSeed').value);octaves=parseInt(document.getElementById('tOct').value);persistence=parseFloat(document.getElementById('tPer').value);
+    const img=ctx.createImageData(c.width,c.height);
+    for(let py=0;py<c.height;py++)for(let px=0;px<c.width;px++){
+      const h=fbm(px/150,py/150,seed,octaves,persistence,lacunarity);
+      const idx=(py*c.width+px)*4;
+      if(h<.35){img.data[idx]=20;img.data[idx+1]=50+ h*100|0;img.data[idx+2]=120+h*80|0;img.data[idx+3]=255}
+      else if(h<.45){img.data[idx]=194;img.data[idx+1]=178;img.data[idx+2]=128;img.data[idx+3]=255}
+      else if(h<.55){img.data[idx]=34+h*60|0;img.data[idx+1]=120+h*40|0;img.data[idx+2]=34;img.data[idx+3]=255}
+      else if(h<.7){img.data[idx]=80+h*40|0;img.data[idx+1]=70+h*30|0;img.data[idx+2]=50;img.data[idx+3]=255}
+      else{const s=200+h*55|0;img.data[idx]=s;img.data[idx+1]=s;img.data[idx+2]=s;img.data[idx+3]=255}
+    }
+    ctx.putImageData(img,0,0);
+  }
+  document.getElementById('tGen').onclick=generate;
+  generate();
+};
+
+// ============================================
+// TOOLS: Matrix Rain, Plasma, Fire (effects)
+// ============================================
+toolFns.matrix=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');const fontSize=14;let columns,drops;
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight;columns=c.width/fontSize;drops=[];for(let i=0;i<columns;i++)drops[i]=rand(0,c.height/fontSize)}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.05)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle='#0f0';ctx.font=fontSize+'px monospace';
+    for(let i=0;i<drops.length;i++){
+      const char=String.fromCharCode(0x30A0+randInt(0,96));
+      ctx.fillStyle=`hsla(120,100%,${rand(30,70)}%,.8)`;ctx.fillText(char,i*fontSize,drops[i]*fontSize);
+      if(drops[i]*fontSize>c.height&&Math.random()>.975)drops[i]=0;drops[i]++;
+    }
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+toolFns.plasma=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');let t=0;
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    t+=.02;const img=ctx.createImageData(c.width,c.height);
+    for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+      const v=Math.sin(x/30+t)+Math.sin(y/30+t*1.3)+Math.sin((x+y)/40+t*.7)+Math.sin(Math.hypot(x-c.width/2,y-c.height/2)/30+t*1.5);
+      const idx=(y*c.width+x)*4;const h=((v+4)/8)*360;
+      img.data[idx]=Math.sin(h*.0174)*127+128;img.data[idx+1]=Math.sin(h*.0174+2)*127+128;img.data[idx+2]=Math.sin(h*.0174+4)*127+128;img.data[idx+3]=255;
+    }
+    ctx.putImageData(img,0,0);animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+toolFns.fire=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#000';W.appendChild(c);
+  const ctx=c.getContext('2d');let w,h,buf=[];
+  function resize(){w=c.width;h=c.height;buf=new Uint8ClampedArray(w*h);ctx.fillStyle='#000';ctx.fillRect(0,0,w,h)}
+  resize();window.addEventListener('resize',resize);
+  c.addEventListener('click',e=>{const r=c.getBoundingClientRect();for(let i=-10;i<=10;i++)for(let j=-10;j<=10;j++){const idx=((e.clientY-r.top+j)*w+(e.clientX-r.left+i));if(idx>=0&&idx<w*h)buf[idx]=255}});
+  function draw(){
+    for(let x=0;x<w;x++){const idx=(h-1)*w+x;buf[idx]=randInt(100,255)}
+    const img=ctx.createImageData(w,h);
+    for(let y=0;y<h-1;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;const below=buf[i+w];const belowL=x>0?buf[i+w-1]:below;const belowR=x<w-1?buf[i+w+1]:below;const twoBelow=i+w*2<w*h?buf[i+w*2]:below;
+      const avg=Math.floor((below+belowL+belowR+twoBelow)/4.04);buf[i]=avg;
+      const idx=i*4;img.data[idx]=clamp(avg*1.5,0,255);img.data[idx+1]=clamp(avg*.5,0,255);img.data[idx+2]=clamp(avg*.1,0,255);img.data[idx+3]=255;
+    }
+    ctx.putImageData(img,0,0);animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+// ============================================
+// TOOL: Synth Piano
+// ============================================
+toolFns.synth=function(){
+  let audioCtx=null;
+  function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
+  const notes={a:261.63,w:277.18,s:293.66,e:311.13,d:329.63,f:349.23,t:369.99,g:392.00,y:415.30,h:440.00,u:466.16,j:493.88};
+  W.innerHTML=`<div class="pad"><div class="pt">Synth Piano</div><div class="hint" style="margin-bottom:10px">Click keys or press A S D F G H J (white) W E T Y U (black)</div>
+    <div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap">
+      ${Object.keys(notes).map(k=>`<div class="btn" style="width:44px;height:100px;padding:0;display:flex;align-items:flex-end;justify-content:center;font-size:.7rem;background:${k.length===1?'#fff':'#222'};color:${k.length===1?'#000':'#fff'};border-radius:0 0 6px 6px" data-key="${k}">${k.toUpperCase()}</div>`).join('')}
+    </div>
+    <div class="row" style="margin-top:12px"><span class="hint">Wave:<select id="sWave"><option value="sine">Sine</option><option value="square">Square</option><option value="sawtooth">Saw</option><option value="triangle">Triangle</option></select></span><span class="hint">Vol:<input type="range" id="sVol" min="0" max="100" value="30" style="width:60px"></span></div>
+  </div>`;
+  function playNote(freq){
+    const ctx=getCtx();const osc=ctx.createOscillator();const gain=ctx.createGain();
+    osc.type=document.getElementById('sWave').value;osc.frequency.value=freq;
+    gain.gain.value=document.getElementById('sVol').value/100*.3;
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+1.5);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+1.5);
+  }
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    el.addEventListener('mousedown',()=>playNote(notes[el.dataset.key]));
+    el.addEventListener('mouseup',()=>{});
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.repeat)return;const k=e.key.toLowerCase();if(notes[k]){playNote(notes[k]);const el=document.querySelector(`[data-key="${k}"]`);if(el){el.style.transform='scale(.95)';setTimeout(()=>el.style.transform='',100)}}
+  });
+};
+
+// ============================================
+// TOOL: Audio Visualizer
+// ============================================
+toolFns.viz=function(){
+  let audioCtx,analyser,source,stream;
+  W.innerHTML=`<div class="pad"><div class="pt">Audio Visualizer</div>
+    <button class="btn btn-p" id="avStart">Start Microphone</button>
+    <button class="btn btn-d" id="avStop" disabled>Stop</button>
+    <canvas id="avC" style="width:100%;height:250px;background:#000;border-radius:8px;margin-top:10px"></canvas>
+  </div>`;
+  const canvas=document.getElementById('avC');const ctx=canvas.getContext('2d');
+  function resize(){canvas.width=W.offsetWidth-32;canvas.height=250}
+  resize();
+  document.getElementById('avStart').onclick=async()=>{
+    try{stream=await navigator.mediaDevices.getUserMedia({audio:true});audioCtx=new(window.AudioContext||window.webkitAudioContext)();analyser=audioCtx.createAnalyser();analyser.fftSize=256;source=audioCtx.createMediaStreamSource(stream);source.connect(analyser);document.getElementById('avStart').disabled=true;document.getElementById('avStop').disabled=false;viz()}catch(e){msg('Mic access denied')}
+  };
+  document.getElementById('avStop').onclick=()=>{if(stream)stream.getTracks().forEach(t=>t.stop());document.getElementById('avStart').disabled=false;document.getElementById('avStop').disabled=true};
+  function viz(){
+    if(!analyser)return;const buf=new Uint8Array(analyser.frequencyBinCount);
+    function draw(){
+      analyser.getByteFrequencyData(buf);
+      ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);
+      const bw=canvas.width/buf.length*2.5;let x=0;
+      for(let i=0;i<buf.length;i++){
+        const h=buf[i]/255*canvas.height;
+        ctx.fillStyle=`hsl(${i/buf.length*280},80%,55%)`;
+        ctx.fillRect(x,canvas.height-h,bw-1,h);x+=bw;
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+};
+
+// ============================================
+// TOOLS: Clock, Calculator, Todo, QR, Color, Gradient
+// ============================================
+toolFns.clock=function(){
+  const c=document.createElement('canvas');c.style.width='100%';c.style.height='100%';c.style.background='#0a0a12';W.appendChild(c);
+  const ctx=c.getContext('2d');
+  function resize(){c.width=c.offsetWidth;c.height=c.offsetHeight}
+  resize();window.addEventListener('resize',resize);
+  function draw(){
+    const cx=c.width/2,cy=c.height/2,r=Math.min(cx,cy)*.8;const now=new Date();
+    ctx.fillStyle='#0a0a12';ctx.fillRect(0,0,c.width,c.height);
+    ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.strokeStyle='#282848';ctx.lineWidth=3;ctx.stroke();
+    for(let i=0;i<12;i++){const a=i*TAU/12-Math.PI/2;const x1=cx+Math.cos(a)*r*.85,y1=cy+Math.sin(a)*r*.85,x2=cx+Math.cos(a)*r*.95,y2=cy+Math.sin(a)*r*.95;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle='#7b5cff';ctx.lineWidth=2;ctx.stroke()}
+    const s=now.getSeconds()+now.getMilliseconds()/1000,m=now.getMinutes()+s/60,h=(now.getHours()%12)+m/60;
+    function hand(angle,len,w,col){const a=angle*TAU/60-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*len,cy+Math.sin(a)*len);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.stroke()}
+    hand(s,r*.75,2,'#ff5c8b');hand(m,r*.6,4,'#7b5cff');hand(h*5,r*.4,6,'#34d399');
+    ctx.beginPath();ctx.arc(cx,cy,5,0,TAU);ctx.fillStyle='#fff';ctx.fill();
+    ctx.fillStyle='#9090b0';ctx.font='14px monospace';ctx.textAlign='center';ctx.fillText(now.toLocaleTimeString(),cx,cy+r*.3);
+    animId=requestAnimationFrame(draw);
+  }
+  draw();
+};
+
+toolFns.calc=function(){
+  let expr='',display='0';
+  W.innerHTML=`<div class="pad" style="max-width:320px;margin:0 auto">
+    <div class="pt">Calculator</div>
+    <div style="background:#000;border-radius:var(--r);padding:16px;margin-bottom:12px;font-family:monospace;font-size:1.4rem;text-align:right;min-height:50px;word-break:break-all" id="cDisp">0</div>
+    <div class="grid4" style="gap:6px">
+      ${['C','(',')','/','7','8','9','*','4','5','6','-','1','2','3','+','0','.','=','%'].map(b=>{
+        const cls=b==='='?'btn-p':['C','%'].includes(b)?'btn-d':'';
+        return `<button class="btn ${cls}" style="padding:12px;font-size:1rem;border-radius:var(--rs)" data-v="${b}">${b}</button>`;
+      }).join('')}
+    </div>
+  </div>`;
+  function update(){$('#cDisp').textContent=display}
+  document.querySelectorAll('[data-v]').forEach(btn=>{
+    btn.onclick=()=>{
+      const v=btn.dataset.v;
+      if(v==='C'){expr='';display='0'}
+      else if(v==='='){try{display=String(Function('"use strict";return ('+expr.replace(/[^0-9+\-*/().%]/g,'')+')')())||'Error';expr=display==='Error'?'':display}catch(e){display='Error';expr=''}}
+      else{if(display==='0'&&v!=='.')display=v;else display+=v;expr+=v}
+      update();
+    }
+  });
+};
+
+toolFns.todo=function(){
+  let items=Store.get('ns_todos',[]);
+  function render(){
+    W.innerHTML=`<div class="pad" style="max-width:400px;margin:0 auto">
+      <div class="pt">Todo List <span class="hint">(${items.length})</span></div>
+      <div class="row" style="margin-bottom:12px">
+        <input type="text" id="tdIn" placeholder="Add task..." style="flex:1" onkeydown="if(event.key==='Enter')addTodo()">
+        <button class="btn btn-p btn-s" onclick="addTodo()">Add</button>
+      </div>
+      <div id="tdList"></div>
+    </div>`;
+    const list=$('#tdList');
+    if(!items.length){list.innerHTML='<div class="hint" style="text-align:center;padding:20px">No tasks yet</div>';return}
+    list.innerHTML=items.map((t,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border)">
+      <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo(${i})" style="accent-color:var(--accent)">
+      <span style="flex:1;font-size:.85rem;text-decoration:${t.done?'line-through':'none'};opacity:${t.done?.5:1}">${esc(t.text)}</span>
+      <button class="btn btn-d btn-xs" onclick="delTodo(${i})">✕</button>
+    </div>`).join('');
+  }
+  window.addTodo=()=>{const v=$('#tdIn').value.trim();if(!v)return;items.push({text:v,done:false});Store.set('ns_todos',items);$('#tdIn').value='';render()};
+  window.toggleTodo=i=>{items[i].done=!items[i].done;Store.set('ns_todos',items);render()};
+  window.delTodo=i=>{items.splice(i,1);Store.set('ns_todos',items);render()};
+  render();
+};
+
+toolFns.qr=function(){
+  W.innerHTML=`<div class="pad" style="text-align:center">
+    <div class="pt">QR Code Generator</div>
+    <input type="text" id="qrIn" placeholder="Enter text or URL..." style="margin-bottom:12px">
+    <div id="qrOut" style="display:inline-block;padding:16px;background:#fff;border-radius:var(--r);min-width:200px;min-height:200px"></div>
+    <div class="hint" style="margin-top:8px">Uses QRServer API</div>
+  </div>`;
+  let timer=null;
+  $('#qrIn').oninput=e=>{
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+      const v=e.target.value.trim();
+      if(v)$('#qrOut').innerHTML=`<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(v)}" style="width:200px;height:200px">`;
+      else $('#qrOut').innerHTML='<div class="hint" style="color:#999;padding:40px">Enter text above</div>';
+    },400);
+  };
+};
+
+toolFns.color=function(){
+  let h=260,s=70,l=55;
+  function render(){
+    const c1=`hsl(${h},${s}%,${l}%)`,c2=`hsl(${(h+30)%360},${s}%,${l}%)`,c3=`hsl(${(h+60)%360},${s}%,${l}%)`,c4=`hsl(${(h+180)%360},${s}%,${l}%)`;
+    W.innerHTML=`<div class="pad"><div class="pt">Color Lab</div>
+      <div style="display:flex;gap:12px;margin-bottom:16px">
+        <div style="width:80px;height:80px;border-radius:var(--r);background:${c1}" id="cMain"></div>
+        <div style="flex:1" class="col" style="gap:6px">
+          <span class="hint">H:<input type="range" id="cH" min="0" max="360" value="${h}" style="flex:1"></span>
+          <span class="hint">S:<input type="range" id="cS" min="0" max="100" value="${s}" style="flex:1"></span>
+          <span class="hint">L:<input type="range" id="cL" min="0" max="100" value="${l}" style="flex:1"></span>
+        </div>
+      </div>
+      <div class="grid4" style="margin-bottom:12px">
+        <div style="height:50px;border-radius:var(--rs);background:${c1}"></div>
+        <div style="height:50px;border-radius:var(--rs);background:${c2}"></div>
+        <div style="height:50px;border-radius:var(--rs);background:${c3}"></div>
+        <div style="height:50px;border-radius:var(--rs);background:${c4}"></div>
+      </div>
+      <div class="hint">HEX: <span id="cHex">${c1}</span></div>
+    </div>`;
+    ['cH','cS','cL'].forEach(id=>{document.getElementById(id).oninput=e=>{if(id==='cH')h=parseInt(e.target.value);else if(id==='cS')s=parseInt(e.target.value);else l=parseInt(e.target.value);render()}});
+  }
+  render();
+};
+
+toolFns.gradient=function(){
+  let angle=135,c1='#667eea',c2='#764ba2';
+  function render(){
+    const css=`linear-gradient(${angle}deg, ${c1}, ${c2})`;
+    W.innerHTML=`<div class="pad"><div class="pt">Gradient Generator</div>
+      <div style="height:120px;border-radius:var(--r);background:${css};margin-bottom:16px"></div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="color" id="gC1" value="${c1}" style="width:40px;height:30px;border:none;cursor:pointer;background:none">
+        <input type="color" id="gC2" value="${c2}" style="width:40px;height:30px;border:none;cursor:pointer;background:none">
+        <input type="number" id="gAng" value="${angle}" min="0" max="360" style="width:60px" class="btn" style="padding:6px 10px">
+      </div>
+      <textarea rows="2" readonly style="font-family:monospace;font-size:.78rem;margin-bottom:8px">background: ${css};</textarea>
+      <button class="btn btn-p btn-s" onclick="navigator.clipboard.writeText('background: '+document.querySelector('textarea').value);msg('Copied!')">Copy CSS</button>
+    </div>`;
+    document.getElementById('gC1').oninput=e=>{c1=e.target.value;render()};
+    document.getElementById('gC2').oninput=e=>{c2=e.target.value;render()};
+    document.getElementById('gAng').oninput=e=>{angle=parseInt(e.target.value);render()};
+  }
+  render();
+};
+
+// ============================================
+// INIT
+// ============================================================
+loadTool(tools[0]);
+</script>
+</body>
+</html>

@@ -11,9 +11,9 @@
   }
   window.PW={
     gen(){let chars='';if(document.getElementById('pw-lo').checked)chars+=lower;if(document.getElementById('pw-up').checked)chars+=upper;if(document.getElementById('pw-num').checked)chars+=nums;if(document.getElementById('pw-sym').checked)chars+=syms;if(!chars){Toast.error('Select at least one option');return;}
-      const len=parseInt(document.getElementById('pw-len').value)||16;let pw='';for(let i=0;i<len;i++)pw+=chars[Math.floor(Math.random()*chars.length)];
+      let len=parseInt(document.getElementById('pw-len').value)||16;let pw='';for(let i=0;i<len;i++)pw+=chars[Math.floor(Math.random()*chars.length)];
       document.getElementById('pw-out').textContent=pw;
-      const score=len>=12?(chars.length>50?3:2):len>=8?1:0;const labels=['Weak','Fair','Good','Strong'];const colors=['var(--red)','var(--yellow)','var(--green)','var(--accent)'];
+      let score=len>=12?(chars.length>50?3:2):len>=8?1:0;let labels=['Weak','Fair','Good','Strong'];let colors=['var(--red)','var(--yellow)','var(--green)','var(--accent)'];
       document.getElementById('pw-strength').innerHTML=`Strength: <strong style="color:${colors[score]}">${labels[score]}</strong>`;
     }
   };

@@ -8,13 +8,9 @@
     CG.preview();
   }
   window.CG={
-    preview(){const c1=document.getElementById('cg-c1').value,c2=document.getElementById('cg-c2').value,t=document.getElementById('cg-type').value,a=document.getElementById('cg-angle').value;
-      const css=t==='linear'?`linear-gradient(${a}deg, ${c1}, ${c2})`:`radial-gradient(circle, ${c1}, ${c2})`;
-      document.getElementById('cg-preview').style.background=css;
-      document.getElementById('cg-css').value=`background: ${css};
+    preview(){let c1=document.getElementById('cg-c1').value,c2=document.getElementById('cg-c2').value,t=document.getElementById('cg-type').value,a=document.getElementById('cg-angle').value;let css=t==='linear'?`linear-gradient(${a}deg, ${c1}, ${c2})`:`radial-gradient(circle, ${c1}, ${c2})`;document.getElementById('cg-preview').style.background=css;document.getElementById('cg-css').value=`background: ${css};
 border-radius: 12px;
-height: 150px;`;
-    }
+height: 150px;`;}
   };
-  Router.registerRoute('#css-gradient','CSS Gradient Generator',render);
+  Router.registerRoute('#css-gradient','CSS Gradient',render);
 })();

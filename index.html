@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Student Study Hub — 68 free offline tools for students">
+<meta name="description" content="Student Study Hub — 94 free offline tools for students">
 <meta name="theme-color" content="#7b9aff">
 <title>Student Study Hub</title>
 <link rel="stylesheet" href="css/style.css">
@@ -11,15 +11,15 @@
 </head>
 <body>
 <nav id="sidebar" class="sidebar">
-  <div class="sidebar-header"><h2><span class="logo">📚</span>Study Hub</h2><button id="sidebar-close" class="btn-icon">✕</button></div>
-  <div class="sidebar-search"><input type="text" id="search-input" placeholder="Search 68 tools..." autocomplete="off"></div>
+  <div class="sidebar-header"><h2><span class="logo">📚</span>Study Hub v3</h2><button id="sidebar-close" class="btn-icon">✕</button></div>
+  <div class="sidebar-search"><input type="text" id="search-input" placeholder="Search 94 tools..." autocomplete="off"></div>
   <div class="sidebar-nav" id="nav-container"></div>
-  <div class="sidebar-footer"><span class="version">v2.0</span><span>68 Tools • Offline</span></div>
+  <div class="sidebar-footer"><span class="version">v3.0</span><span>94 Tools • 100% Offline</span></div>
 </nav>
 <div class="app-container">
   <header class="topbar"><button id="sidebar-toggle" class="btn-icon">☰</button><h1 id="page-title">Home</h1><div class="topbar-actions"><button id="theme-toggle" class="btn-icon" title="Toggle theme">🌙</button></div></header>
   <main id="content" class="content"></main>
-  <footer class="footer"><span>Student Study Hub v2 • 68 Tools • 100% Free & Offline • <a href="https://github.com/mayank-dev-15/student-study-hub" target="_blank">GitHub</a></span></footer>
+  <footer class="footer"><span>Student Study Hub v3 • 94 Tools • 100% Free & Offline • Hand-written, no frameworks</span></footer>
 </div>
 <!-- Core -->
 <script src="js/router.js"></script>
@@ -27,19 +27,22 @@
 <script src="js/storage.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/home.js"></script>
-<!-- Tools: Academic -->
+<!-- Academic -->
 <script src="js/tools/gpa.js"></script>
+<script src="js/tools/gpa-target.js"></script>
 <script src="js/tools/schedule.js"></script>
 <script src="js/tools/assignment-tracker.js"></script>
 <script src="js/tools/exam-countdown.js"></script>
 <script src="js/tools/quiz.js"></script>
 <script src="js/tools/session-logger.js"></script>
-<!-- Tools: STEM -->
+<!-- STEM -->
 <script src="js/tools/scientific-calc.js"></script>
 <script src="js/tools/graphing-calc.js"></script>
 <script src="js/tools/unit-converter.js"></script>
 <script src="js/tools/number-base.js"></script>
+<script src="js/tools/number-systems.js"></script>
 <script src="js/tools/periodic-table.js"></script>
+<script src="js/tools/periodic-full.js"></script>
 <script src="js/tools/formula-ref.js"></script>
 <script src="js/tools/physics-constants.js"></script>
 <script src="js/tools/chem-balancer.js"></script>
@@ -47,12 +50,14 @@
 <script src="js/tools/tables.js"></script>
 <script src="js/tools/matrix-calc.js"></script>
 <script src="js/tools/probability.js"></script>
+<script src="js/tools/ip-calc.js"></script>
 <script src="js/tools/financial-calc.js"></script>
-<!-- Tools: Productivity -->
+<!-- Productivity -->
 <script src="js/tools/pomodoro.js"></script>
 <script src="js/tools/pomodoro-stats.js"></script>
 <script src="js/tools/stopwatch.js"></script>
 <script src="js/tools/countdown-timer.js"></script>
+<script src="js/tools/countdown-events.js"></script>
 <script src="js/tools/interval-timer.js"></script>
 <script src="js/tools/todo.js"></script>
 <script src="js/tools/kanban.js"></script>
@@ -62,42 +67,77 @@
 <script src="js/tools/habit-tracker.js"></script>
 <script src="js/tools/goal-tracker.js"></script>
 <script src="js/tools/reading-list.js"></script>
-<!-- Tools: Reference -->
+<script src="js/tools/date-countdown.js"></script>
+<script src="js/tools/meeting-planner.js"></script>
+<!-- Reference -->
 <script src="js/tools/cheatsheets.js"></script>
-<!-- Tools: Coding -->
+<script src="js/tools/http-codes.js"></script>
+<script src="js/tools/git-cheat.js"></script>
+<script src="js/tools/regex-cheat.js"></script>
+<script src="js/tools/cron-builder.js"></script>
+<script src="js/tools/unix-perm.js"></script>
+<!-- Coding -->
 <script src="js/tools/code-playground.js"></script>
 <script src="js/tools/regex-tester.js"></script>
 <script src="js/tools/json-formatter.js"></script>
+<script src="js/tools/json-csv.js"></script>
 <script src="js/tools/base64.js"></script>
 <script src="js/tools/color-picker.js"></script>
+<script src="js/tools/palette-gen.js"></script>
 <script src="js/tools/css-gradient.js"></script>
+<script src="js/tools/css-animation.js"></script>
+<script src="js/tools/flexbox-play.js"></script>
 <script src="js/tools/html-entities.js"></script>
 <script src="js/tools/url-encoder.js"></script>
 <script src="js/tools/diff-tool.js"></script>
+<script src="js/tools/diff-side.js"></script>
+<script src="js/tools/text-compare.js"></script>
+<script src="js/tools/base-converter.js"></script>
 <script src="js/tools/jwt-decoder.js"></script>
 <script src="js/tools/hash-gen.js"></script>
+<script src="js/tools/hash-calc.js"></script>
+<script src="js/tools/hash-id.js"></script>
 <script src="js/tools/password-gen.js"></script>
+<script src="js/tools/password-strength.js"></script>
+<script src="js/tools/qr-gen.js"></script>
+<script src="js/tools/morse.js"></script>
+<script src="js/tools/hex-viewer.js"></script>
 <script src="js/tools/ipsum-gen.js"></script>
+<script src="js/tools/lorem-advanced.js"></script>
+<script src="js/tools/md-table.js"></script>
 <script src="js/tools/unix-time.js"></script>
+<script src="js/tools/file-size.js"></script>
+<script src="js/tools/encrypt.js"></script>
+<script src="js/tools/md-to-html.js"></script>
+<script src="js/tools/box-shadow-gen.js"></script>
 <script src="js/tools/color-contrast.js"></script>
-<!-- Tools: Writing -->
+<script src="js/tools/contrast-grid.js"></script>
+<script src="js/tools/color-blind.js"></script>
+<!-- Writing -->
 <script src="js/tools/word-counter.js"></script>
+<script src="js/tools/word-freq.js"></script>
 <script src="js/tools/readability.js"></script>
 <script src="js/tools/citation-gen.js"></script>
-<!-- Tools: Games -->
+<!-- Games -->
 <script src="js/tools/dice-roller.js"></script>
 <script src="js/tools/random-picker.js"></script>
 <script src="js/tools/word-scramble.js"></script>
 <script src="js/tools/speed-typing.js"></script>
-<!-- Tools: Health -->
+<script src="js/tools/typing-test.js"></script>
+<script src="js/tools/emoji-picker.js"></script>
+<!-- Health -->
 <script src="js/tools/water-tracker.js"></script>
 <script src="js/tools/sleep-calc.js"></script>
 <script src="js/tools/eye-exercise.js"></script>
 <script src="js/tools/bmi-calc.js"></script>
+<script src="js/tools/bmr-calc.js"></script>
 <script src="js/tools/calorie-calc.js"></script>
-<!-- Tools: Utilities -->
+<!-- Utilities -->
 <script src="js/tools/world-clock.js"></script>
+<script src="js/tools/timezone.js"></script>
 <script src="js/tools/expense-split.js"></script>
+<script src="js/tools/unit-price.js"></script>
+<script src="js/tools/loan-calc.js"></script>
 <script src="js/tools/budget.js"></script>
 <script src="js/tools/persistence.js"></script>
 <!-- App init -->
